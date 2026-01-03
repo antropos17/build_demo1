@@ -1,0 +1,25 @@
+# Скопируйте это содержимое в файл .env.local
+
+# MongoDB Connection
+MONGODB_URI=mongodb+srv://ruslan:abc123321@test1.usrhbbc.mongodb.net/findbuild?retryWrites=true&w=majority&appName=Test1
+
+# NextAuth Configuration
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=xjO7tWakQIfjHRfoUZqkEhAlz6nUdLJARWmN/3RmtMc=
+
+# Cloudinary (Optional - for image uploads)
+# CLOUDINARY_CLOUD_NAME=your-cloud-name
+# CLOUDINARY_API_KEY=your-api-key
+# CLOUDINARY_API_SECRET=your-api-secret
+
+# Google OAuth (Optional)
+# GOOGLE_CLIENT_ID=your-google-client-id
+# GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# Facebook OAuth (Optional)
+# FACEBOOK_CLIENT_ID=your-facebook-app-id
+# FACEBOOK_CLIENT_SECRET=your-facebook-app-secret
+
+
+
+
