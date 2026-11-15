@@ -22,7 +22,7 @@ class EngineDSP{
    this.rpm+=(s.rpm-this.rpm)*this.smooth;
    this.phase+=this.rpm/(30*sr);
    if(this.phase>=1){this.phase-=1;const j=this.order[this.counter++%4],a=s.cyl[j]||0;
-    if(a>.001){const successful=this.noise()*.5+.5>Math.min(.85,s.miss[j]||0)||(live===1&&this.streak[j]>=3);
+    if(a>.001&&!s.cut){const successful=this.noise()*.5+.5>Math.min(.85,s.miss[j]||0)||(live===1&&this.streak[j]>=3);
      if(successful){this.env[j]=a*(.22+s.load*.70)*(1+this.noise()*.045);this.age[j]=0;this.streak[j]=0;this.fires++;}
      else{this.streak[j]++;this.misses++;}
     }
@@ -45,7 +45,8 @@ class EngineDSP{
    this.shaftPhase=(this.shaftPhase+this.rpm/(60*sr))%1;
    const pop=this.pop*(this.air*.32+Math.sin(this.shaftPhase*TAU)*.45);
    const rasp=(noise-this.air)*Math.min(.025,(s.friction||0)*.009)*(.15+s.load*.85);
-   const input=pipe+this.air*(.012+s.load*.055)+fan+rasp+metal*.07+pop;
+   const brakeNoise=(noise-this.air)*Math.min(.018,(s.brake||0)*.018)*Math.min(1,this.rpm/1800);
+   const input=pipe+this.air*(.012+s.load*.055)+fan+rasp+metal*.07+pop+brakeNoise;
    this.lp+=(input-this.lp)*this.lowA;
    const highPass=this.lp-this.last+.9965*this.dc;this.last=this.lp;this.dc=highPass;
    const v=highPass*2.1;out[i]=v/(1+Math.abs(v))*.82;
@@ -71,7 +72,7 @@ class MotorAudio{
   let guard=0;while(this.next<now+.22&&guard++<4){const n=Math.round(this.ctx.sampleRate*.08),buffer=this.ctx.createBuffer(1,n,this.ctx.sampleRate);this.dsp.render(buffer.getChannelData(0));const src=this.ctx.createBufferSource();src.buffer=buffer;src.connect(this.master);this.sources.add(src);src.onended=()=>{this.sources.delete(src);src.disconnect();};src.start(this.next);this.next+=n/this.ctx.sampleRate;}
  }
  send(s){this.lastState=s;if(this.node)this.node.port.postMessage(s);if(this.dsp)this.dsp.set(s);}
- update(m){this.send({rpm:m.rpm,load:m.throttle,damage:m.damage,friction:m.friction,fan:m.relay?.fan||0,cyl:m.cylinders.map(c=>c.active?c.compression:0),miss:m.cylinders.map(c=>c.misfire)});}
+ update(m){this.send({rpm:m.rpm,load:m.throttle,cut:!!(m.revCut||m.overrun),brake:m.brake||0,damage:m.damage,friction:m.friction,fan:m.relay?.fan||0,cyl:m.cylinders.map(c=>c.active?c.compression:0),miss:m.cylinders.map(c=>c.misfire)});}
  hit(level=1){if(this.node)this.node.port.postMessage({type:'hit',level});if(this.dsp)this.dsp.hit(level);}
  event(e){if(!this.ready)return;if(e.type==='backfire'||e.type==='relay'){if(this.node)this.node.port.postMessage({type:e.type});if(this.dsp)this.dsp[e.type==='relay'?'relay':'backfire']();}else if(['cylinder','cover','exhaust','leftMount','rightMount','metal','gasket'].includes(e.type))this.hit(e.type==='cylinder'?1:.35);}
  setVolume(value){this.volume=Math.max(0,Math.min(1,Number(value)||0));if(this.master)this.master.gain.setTargetAtTime(this.muted?0:this.volume,this.ctx.currentTime,.03);}

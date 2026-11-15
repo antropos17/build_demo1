@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const { Engine, Renderer, MotorAudio, clamp } = window.Piston;
+  const { Engine, Renderer, MotorAudio, PedalInput, Dashboard, clamp } = window.Piston;
   const $ = id => document.getElementById(id), canvas = $('engine'), button = $('gas');
   const storageKey = 'last-piston:survivor:v1', prefsKey = 'last-piston:settings:v1';
   const testing = new URLSearchParams(location.search).has('test') || window.__PISTON_TEST__ === true;
@@ -15,7 +15,7 @@
   const view = new Renderer(canvas), sound = new MotorAudio();
   const motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
   sound.muted = prefs.muted === true; view.reduced = prefs.reduced === true || motionPreference.matches;
-  let pointer = null, keys = new Set(), held = false, last = 0, acc = 0, hudTime = 0, saveTime = 0;
+  let held = false, last = 0, acc = 0, hudTime = 0, saveTime = 0;
   let inspecting = false, audioTime=0, perfTime=0, renderCost=0, slowFrames=0;
   let targetFps=60, skippedTime=0;
   let frameMs = 16, pausedForTest = false, resetUntil = 0, resetTimer = null, logSignature = null;
@@ -34,23 +34,12 @@
     dom.mute.textContent = sound.muted ? 'Включить звук' : 'Выключить звук'; dom.mute.setAttribute('aria-pressed', String(!sound.muted));
     dom.motion.textContent = view.reduced ? 'Вернуть тряску' : 'Уменьшить тряску'; dom.motion.setAttribute('aria-pressed', String(view.reduced));
   }
-  function syncInput() {
-    const next = pointer !== null || keys.size > 0, changed = next !== held; held = next;
-    button.classList.toggle('pressed', held); button.setAttribute('aria-pressed', String(held));
-    if (held && changed && inspecting) setInspection(false);
-    if (held && changed) sound.start().then(ok => { audioStatus(); if (!ok) dom['audio-status'].textContent = 'ЗВУК НЕДОСТУПЕН'; });
-  }
-  function release() { pointer = null; keys.clear(); syncInput(); }
-  button.addEventListener('pointerdown', e => {
-    if (pointer !== null || (e.pointerType === 'mouse' && e.button !== 0)) return;
-    e.preventDefault(); pointer = e.pointerId;
-    try { button.setPointerCapture(e.pointerId); } catch (_) {}
-    syncInput();
+  const dashboard = new Dashboard();
+  const pedals = new PedalInput(button, $('brake'), () => {
+    if (inspecting) setInspection(false);
+    sound.start().then(ok => { audioStatus(); if (!ok) dom['audio-status'].textContent = 'ЗВУК НЕДОСТУПЕН'; });
   });
-  const releasePointer = e => { if (pointer === e.pointerId) { pointer = null; syncInput(); } };
-  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(type, releasePointer);
-  window.addEventListener('pointerup', releasePointer); window.addEventListener('pointercancel', releasePointer);
-  button.addEventListener('contextmenu', e => e.preventDefault());
+  function release() { pedals.release(); held = false; }
   function setInspection(value){
     inspecting=value;last=0;acc=0;
     $('inspect-pause').textContent=value?'Продолжить':'Пауза осмотра';$('inspect-pause').setAttribute('aria-pressed',String(value));
@@ -93,13 +82,9 @@
   motionPreference.addEventListener?.('change', e => { if (e.matches) view.reduced = true; audioStatus(); });
   window.addEventListener('keydown', e => {
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable) return;
-    const otherControl = e.target.closest?.('button,summary,[role=button]') && e.target !== button;
-    if (!otherControl && (['Space', 'ArrowUp'].includes(e.code) || (e.code === 'Enter' && e.target === button))) { e.preventDefault(); keys.add(e.code); syncInput(); }
     if (e.code === 'KeyM' && !e.repeat) { sound.mute(); audioStatus(); persist(); }
     if (e.code === 'KeyR' && !e.repeat) requestReset();
   });
-  window.addEventListener('keyup', e => { if (keys.delete(e.code)) syncInput(); });
-  window.addEventListener('blur', release);
   const suspend = () => { release(); last = 0; acc = 0; persist(); sound.suspend().catch(() => {}); };
   const resume = () => { last = 0; acc = 0; if(!inspecting) sound.resume().catch(() => {}); };
   document.addEventListener('visibilitychange', () => document.hidden ? suspend() : resume());
@@ -107,7 +92,7 @@
   window.addEventListener('resize', () => { view.resize(); view.render(model); drawTrace(); });
   function events() {
     for (const e of model.drainEvents()) {
-      view.event(e, model); sound.event(e);
+      if (e.type !== 'brakeHeat') { view.event(e, model); sound.event(e); }
       if (e.type !== 'backfire' && e.type !== 'relay') dom['event-log'].textContent = `${fmt(e.time)} / ${e.message}`;
     }
   }
@@ -129,11 +114,11 @@
     dom.temp.classList.toggle('hot', model.coolant > 110 || model.coolantLevel<.01); dom.pressure.classList.toggle('hot', model.pressure < 1);
     const stage = model.activeCount === 1 ? 5 : model.activeCount < 4 ? 4 : model.damage > .55 ? 3 : model.gasket > .17 ? 2 : model.block > 135 ? 1 : 0;
     const titles = ['Отступать некуда. Газуй.', 'Температура растёт.', 'Прокладка больше не держит.', 'Металл заговорил.', 'Работает на том, что осталось.', 'Один поршень. Ещё один оборот.'];
-    const details = ['Держи газ. Отпусти, чтобы снять нагрузку.', 'Масло и охлаждающая жидкость нагреваются вслед за блоком.', 'Пар из стыков, масло на корпусе. Нагрев ускоряет износ.', 'Вкладыши стучат. Крепления ослабли. Повреждения останутся.', 'Обломки гремят, оставшиеся цилиндры продолжают тянуть.', 'Пропуск. Толчок. Ещё оборот. Последний цилиндр не отключается.'];
+    const details = ['Газ разгоняет вал. Тормоз добавляет нагрузку и нагрев.', 'Масло и охлаждающая жидкость нагреваются вслед за блоком.', 'Пар из стыков, масло на корпусе. Нагрев ускоряет износ.', 'Вкладыши стучат. Крепления ослабли. Повреждения останутся.', 'Обломки гремят, оставшиеся цилиндры продолжают тянуть.', 'Пропуск. Толчок. Ещё оборот. Последний цилиндр не отключается.'];
     const states = ['ХОЛОСТОЙ ХОД', 'ТЕРМИЧЕСКАЯ НАГРУЗКА', 'ПРОРЫВ ПРОКЛАДКИ', 'СТУК ВКЛАДЫШЕЙ', 'РАБОТА С ПОВРЕЖДЕНИЯМИ', '1 / 4 · ВСЁ ЕЩЁ ЖИВ'];
     dom['event-title'].textContent = titles[stage]; dom['event-detail'].textContent = details[stage];
     dom['event-label'].textContent = stage === 5 ? 'РЕЖИМ ПОСЛЕДНЕГО ПОРШНЯ' : model.profile==='stress'?'СТРЕСС-ТЕСТ · ТЕПЛО И СТАРЕНИЕ ×8':'ОБЫЧНАЯ ЭКСПЛУАТАЦИЯ';
-    dom.status.lastChild.textContent = held && stage === 0 ? 'ПОЛНАЯ НАГРУЗКА' : states[stage];
+    dom.status.lastChild.textContent = model.brake > .04 ? 'ТОРМОЖЕНИЕ ВАЛА' : model.throttle > .05 && stage === 0 ? `ГАЗ ${Math.round(model.throttle * 100)}%` : states[stage];
     dom.caption.textContent = model.activeCount === 1 ? 'ВЫЖИВАНИЕ / ' + fmt(model.survivalTime) : 'ПОВРЕЖДЕНИЯ НЕ ЗАКАНЧИВАЮТ ИГРУ';
     dom.survival.textContent = model.activeCount === 1 ? 'НА ОДНОМ: ' + fmt(model.survivalTime) : 'ВСЕГДА ОСТАЁТСЯ ОДИН';
     dom.best.textContent = `${Math.round(model.peakRPM).toLocaleString('ru-RU')} rpm / ${Math.round(model.peakTemp)}°`;
@@ -154,10 +139,12 @@
     $('exhaust-temp').textContent=Math.round(model.sensor.egt); $('manifold').textContent=model.manifoldBar.toFixed(2); $('fuel-rate').textContent=model.fuelLh.toFixed(1);
     const r=model.relay; $('relay-reading').textContent=`K1 · ${r.heatTrip?'ТЕРМОЗАЩИТА':r.closed?'ЗАМКНУТО':'РАЗОМКНУТО'} · ${r.voltage.toFixed(1)} V · ${r.current.toFixed(1)} A · контакты ${Math.round(r.contactTemp)}°C · катушка ${Math.round(r.coilTemp)}°C`;
     $('model-note').textContent=(model.profile==='stress'?'СТРЕСС ×8: НАГРЕВ И ИЗНОС УСКОРЕНЫ. ':'ОБЫЧНЫЙ ТЕМП НАГРЕВА. ')+'I4, РЕЙТИНГ 110 кВт / 192 Н·м. РАСЧЁТНЫЕ ДАННЫЕ. ПОСЛЕДНИЙ ЦИЛИНДР НЕ ОСТАНАВЛИВАЕТСЯ.';
-    journal();
+    journal(); dashboard.update(model);
   }
   const traceCanvas = $('shaft-trace'), trace = traceCanvas.getContext('2d');
+  document.querySelector('.diagnostic-fold').addEventListener('toggle', () => { hud(); drawTrace(); });
   function drawTrace() {
+    if (!traceCanvas.clientWidth) return;
     const width = Math.round(traceCanvas.clientWidth * Math.min(devicePixelRatio || 1, 2)), height = 64;
     if (traceCanvas.width !== width) traceCanvas.width = width;
     if (traceCanvas.height !== height) traceCanvas.height = height;
@@ -174,7 +161,7 @@
     const dt=Math.min(.05,Math.max(0,raw));skippedTime+=Math.max(0,raw-dt);
     frameMs=frameMs*.96+raw*1000*.04;
     const begin=performance.now();
-    acc+=dt;let n=0;while(acc>=1/120&&n++<6){model.step(1/120,held);acc-=1/120;}if(acc>.05)acc=0;
+    acc+=dt;let n=0;while(acc>=1/120&&n++<6){pedals.update(1/120); held=pedals.gas>.001; model.step(1/120,pedals.gas,pedals.brake);acc-=1/120;}if(acc>.05)acc=0;
     events();view.update(dt,model);view.render(model);
     const cost=performance.now()-begin;renderCost=renderCost*.95+cost*.05;
     hudTime+=dt;audioTime+=dt;saveTime+=dt;perfTime+=dt;
@@ -192,13 +179,14 @@
 
   if (saved) { dom['event-log'].textContent = 'Мотор и история повреждений восстановлены.'; view.restoreDebris(model); }
   if (testing) window.__engineLab = {
-    get inspecting() { return inspecting; }, get engine() { return model; }, get renderer() { return view; }, get audio() { return sound; }, get held() { return held; }, get frameMs() { return frameMs; }, get renderCost(){return renderCost;}, get skippedTime(){return skippedTime;},
+    get inspecting() { return inspecting; }, get engine() { return model; }, get renderer() { return view; }, get audio() { return sound; }, get held() { return pedals.held; }, get pedals() { return pedals; }, get dashboard() { return dashboard; }, get frameMs() { return frameMs; }, get renderCost(){return renderCost;}, get skippedTime(){return skippedTime;},
     pause(value = true) { pausedForTest = value; last = 0; },
-    advance(seconds, gas = true, visual = false) {
-      for (let n = 0; n < Math.round(seconds * 120); n++) { model.step(1 / 120, gas); events(); if (visual && n % 2 === 0) view.update(1 / 60, model); }
+    advance(seconds, gas = true, visual = false, brake = 0) {
+      for (let n = 0; n < Math.round(seconds * 120); n++) { model.step(1 / 120, gas, brake); events(); if (visual && n % 2 === 0) view.update(1 / 60, model); }
       hud(); sound.update(model); view.render(model); drawTrace();
     },
     restore(data) { release(); model = Engine.restore(data); view.reset(); view.restoreDebris(model); logSignature = null; hud(); view.render(model); },
+    stepInputs(seconds = 1) { for (let i=0; i<Math.round(seconds*120); i++) { pedals.update(1/120); model.step(1/120,pedals.gas,pedals.brake); } events(); hud(); view.render(model); },
     reset: newEngine
   };
   audioStatus(); hud(); view.render(model); requestAnimationFrame(frame);

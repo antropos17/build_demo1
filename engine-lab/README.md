@@ -1,34 +1,49 @@
-# Last Piston / ENGINE LAB 09
+# Last Piston / Engine Lab 10
 
-One throttle. Four cylinders. The last piston never stops.
-
-A standalone procedural engine cutaway with combustion audio, contact wear, a thermally coupled fan relay, finite fluids and persistent damage. No external runtime dependencies, backend or downloaded assets.
+A browser cutaway engine with a lower instrument cluster, analogue accelerator and brake. The last piston keeps going.
 
 ## Run
 
-Open `index.html`, or build the portable single-file version:
-
 ```sh
+cd engine-lab
 npm test
 npm run build
 ```
 
-Open `dist/last-piston.html`. Hold **ГАЗ**, Space or Arrow Up. M toggles sound. R twice resets the engine. Cylinder cards zoom the cutaway. Inspection controls switch layers or pause. **Настройки стенда** contains normal/stress profiles, graphics quality and volume. Hidden tabs pause simulation and audio.
+Open `dist/last-piston.html` directly in a browser. It is fully self-contained. No runtime packages, API keys, remote assets, backend or trackers are required. The modular `index.html` can also be served by any static server.
 
-## Version 0.9
+## Controls
 
-Continuous combustion DSP with exhaust resonance, intake and bearing noise; relay current and contact heating affect radiator-fan speed; cached mechanical surfaces and half-resolution smoke; automatic rendering budgets; improved collector, silencer, soot and heat staining; unitful power, torque, exhaust-temperature and fuel-flow displays.
+| Input | Gas | Brake |
+| --- | --- | --- |
+| Touch or mouse | Hold the right pedal; drag higher for more travel | Hold the left pedal; drag higher for more travel |
+| Keyboard | W, Arrow Up, or Space | S, Arrow Down, or B |
+| Focused pedal | Enter or Space | Enter or Space |
 
-[Release details, sources and verification limits](RELEASE-09.md).
+Two fingers work at once. Each pedal is momentary and returns on release. Keyboard travel is progressive. M toggles sound. R twice within four seconds resets the engine. Graphical settings, normal/stress mode, volume and reduced shake remain available. Hidden tabs pause audio and simulation.
 
-The model uses a 1998 cc / 110 kW / 192 N·m reference envelope, not an OEM digital twin. Thermal timing and damage are deliberately accelerated in stress mode. Last-cylinder survival remains a gameplay exception even without oil.
+## What's new in 0.10
 
-## Development
+A bottom dashboard with a tachometer, warning lamps, oil pressure, coolant, brake heat, supply voltage, absorbed torque/power/energy and a rotor preview. Engine RPM comes from a torque/inertia balance, not a pedal-to-RPM animation. The brake adds shaft load and produces heat, fade and wear. Limiter and overrun fuel cut are heard in the existing continuous audio engine.
 
-`src/powertrain.js` extends the thermal/electrical model; `src/mechanics.js` handles 720-degree kinematics and contact wear; `src/effects.js` adds cached rendering; `src/audio.js` contains the shared AudioWorklet/buffered DSP; `src/app.js` handles input, scheduling and UI.
+This is a stationary test stand, not a driving simulator. There is no invented km/h display. Explicit low-speed assistance protects the last cylinder; mechanical aging and stress-test heating are intentionally accelerated. All non-rated physical constants are illustrative model assumptions.
 
-47 automated tests pass. `python tools/check_release.py` is an optional Playwright/Chromium integration check. Browser verification in the current environment uses inline HTML; hosted AudioWorklet integration and physical mobile hardware were not tested.
+Version-5 saves migrate old damage, never held inputs. Previous journal, smoke, oil, cooling relay, cylinder zoom, four inspection layers, finite fluids and bounded cached rendering are retained.
 
-## Repository
+## Project structure
 
-Current home: `antropos17/build_demo1`, branch `engine-lab`, folder `engine-lab/`. The parent app's main branch is untouched. This folder can become an independent repository: extract the project ZIP outside any Git tree, authenticate GitHub CLI, then run `bash tools/publish-github.sh last-piston`. It creates a private repository by default; `--public` is explicit. Repository creation was not available through the connected tool.
+- `src/simulation.js`, `dynamics.js`, `mechanics.js`, `powertrain.js`: base model and thermal/electrical subsystems.
+- `src/dyno.js`: analogue commands, shaft inertia, limiter, brake absorption, heat/fade and v5 persistence.
+- `src/pedals.js`: independent pointer/key ownership and safe input release.
+- `src/dashboard.js`, `dashboard.css`: retained SVG instruments and pedal materials.
+- `src/renderer.js`, `workshop.js`, `cutaway.js`, `effects.js`: cutaway and cached visual effects.
+- `src/audio.js`: one continuous worklet/buffered DSP.
+- `src/app.js`: lifecycle, fixed-step loop, settings and telemetry.
+
+## Verification
+
+59 Node tests and 46 Chromium checks passed in this iteration. Run `npm test`, `npm run build`, then optionally `python tools/check_dashboard.py` with Playwright and Chromium installed. See `RELEASE-10.md` for exact scope and limitations. The environment used inline HTML and buffered audio, not physical mobile hardware or the AudioWorklet browser host.
+
+## Repository boundary
+
+Work only in `engine-lab/` on branch `engine-lab` of `antropos17/build_demo1`. Do not modify or merge the parent application without a separate request. Build output is ignored; generate the portable HTML locally.

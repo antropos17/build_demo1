@@ -4,8 +4,10 @@ When working in the parent repository, work only inside `engine-lab/` on branch 
 
 The defining rule is last-piston survival. Never add terminal engine failure, a game-over screen, automatic restart, or a zero-active-cylinder state. Three cylinders may fail individually; the last continues with reduced output. Do not hide this deliberate arcade rule behind claims of physical accuracy.
 
-Keep one primary visible control: hold throttle. Keep mobile touch release/cancel, keyboard, reduced-motion, tab suspension and local-save validation working. No remote services or runtime dependencies are necessary.
+Keep two independent momentary controls: analogue gas and brake. Brake loads the test-stand shaft, not a fictional vehicle. Never persist held pedal inputs. Keep mobile touch release/cancel, keyboard, reduced-motion, tab suspension and local-save validation working. No remote services or runtime dependencies are necessary.
 
 Engine model, renderer, audio and application lifecycle remain separated. Run `npm test` and `npm run build` after edits. Test extended one-cylinder operation, cooling without resurrection, bounded particle memory, and the portable build. Do not claim AudioWorklet/mobile hardware verification without actually running it.
 
 Version 0.9 entry points: `src/powertrain.js` extends the thermal/relay model, `src/effects.js` adds cached rendering, and `src/audio.js` owns one continuous DSP. Keep source ordering in index.html. Keep real-time thermal timing separate from accelerated stress and preserve units. Do not claim a newly created repository without a successful creation result.
+
+Version 0.10: dyno.js replaces target-RPM interpolation with torque/inertia integration. pedals.js owns independent pointer/key sources; dashboard.js updates retained SVG instruments. Brake absorbed power uses Nm × rpm × 2π / 60000. Keep the arcade anti-stall coupling explicit.

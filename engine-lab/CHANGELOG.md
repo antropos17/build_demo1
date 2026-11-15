@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.10.0 / 2026-11-15
+
+- Added lower instrument cluster and independent analogue gas/brake pedals.
+- Replaced target-RPM animation with torque/inertia integration in the new dyno engine.
+- Added absorbed power, brake heating, cooling, fade, wear and explicit anti-stall unloading.
+- Added overrun/limiter fuel cut and brake-friction audio.
+- Added v5 migration, two-finger source ownership and safe input release.
+- Retained old telemetry in expandable diagnostics; no hidden graph redraws.
+- Verified with 59 Node tests and 46 Chromium checks; see RELEASE-10.md.
+
+
 ## 0.9.0 / 2026-11-15
 
 Continuous combustion DSP; bounded buffered fallback; fan-relay I²R heating and cooling feedback; rated-value telemetry; separate normal/stress profiles; cached mechanical surfaces; half-resolution smoke; adaptive quality; updated exhaust and electrical artwork; volume controls. See RELEASE-09.md for measured verification and limitations.

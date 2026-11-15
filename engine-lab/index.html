@@ -9,42 +9,73 @@
 <link rel="stylesheet" href="workshop.css">
 <link rel="stylesheet" href="cutaway.css">
 <link rel="stylesheet" href="instrument.css">
+<link rel="stylesheet" href="dashboard.css">
 <script defer src="src/simulation.js"></script>
-<script defer src="src/dynamics.js"></script><script defer src="src/mechanics.js"></script><script defer src="src/powertrain.js"></script><script defer src="src/audio.js"></script>
+<script defer src="src/dynamics.js"></script><script defer src="src/mechanics.js"></script><script defer src="src/powertrain.js"></script><script defer src="src/dyno.js"></script><script defer src="src/audio.js"></script>
 <script defer src="src/mechanical-audio.js"></script><script defer src="src/renderer.js"></script>
-<script defer src="src/workshop.js"></script><script defer src="src/cutaway.js"></script><script defer src="src/effects.js"></script><script defer src="src/app.js"></script>
+<script defer src="src/workshop.js"></script><script defer src="src/cutaway.js"></script><script defer src="src/effects.js"></script><script defer src="src/pedals.js"></script><script defer src="src/dashboard.js"></script><script defer src="src/app.js"></script>
 </head>
 <body>
 <main class="lab">
-<header class="masthead"><div class="wordmark"><svg aria-hidden="true" viewBox="0 0 36 40"><path d="M6 3h24v16H6zM6 8h24M6 13h24M18 19v12M12 31a6 6 0 1 0 12 0a6 6 0 1 0-12 0"/></svg><div><p class="eyebrow">ENGINE LAB / 09</p><h1>LAST PISTON<span>.</span></h1></div></div><div class="session"><span class="live-dot"></span><span>ДЕРЖИТСЯ ДО ПОСЛЕДНЕГО</span><strong id="clock">00:00</strong></div></header>
+<header class="masthead"><div class="wordmark"><svg aria-hidden="true" viewBox="0 0 36 40"><path d="M6 3h24v16H6zM6 8h24M6 13h24M18 19v12M12 31a6 6 0 1 0 12 0a6 6 0 1 0-12 0"/></svg><div><p class="eyebrow">ENGINE LAB / 10</p><h1>LAST PISTON<span>.</span></h1></div></div><div class="session"><span class="live-dot"></span><span>ДЕРЖИТСЯ ДО ПОСЛЕДНЕГО</span><strong id="clock">00:00</strong></div></header>
 <nav class="inspection-tools" aria-label="Слои разреза">
 <div class="view-modes"><button type="button" data-view="section" aria-pressed="true">Разрез</button><button type="button" data-view="oil" aria-pressed="false">Смазка</button><button type="button" data-view="thermal" aria-pressed="false">Температуры</button><button type="button" data-view="damage" aria-pressed="false">Износ</button></div>
 <div class="inspection-actions"><button type="button" id="inspect-pause" aria-pressed="false">Пауза осмотра</button><button type="button" id="zoom-out">Общий вид</button></div>
 </nav>
 <section class="machine" aria-label="Двигатель в разрезе">
-<div class="scene-caption"><span>РЯДНЫЙ 4 / 2.0 L</span><span id="caption">ЧЕТЫРЕ ЦИЛИНДРА. ОДНА КНОПКА.</span></div>
+<div class="scene-caption"><span>РЯДНЫЙ 4 / 2.0 L</span><span id="caption">ГАЗ + ТОРМОЗ · ИНЕРЦИОННЫЙ СТЕНД</span></div>
 <canvas id="engine" width="1200" height="680" role="img" aria-label="Разрез четырёхцилиндрового двигателя: поршни, шатуны, коленвал, клапаны, дым, масляные потёки и вылетающие детали. Повреждения не заканчивают игру.">Состояние двигателя отображено в показателях под сценой.</canvas>
 <div class="stage-meta"><span id="status"><i></i>РОВНЫЙ ХОЛОСТОЙ ХОД</span><span class="view-note">ПРОДОЛЬНАЯ ПРОЕКЦИЯ · ЗАМЕДЛЕННЫЙ ЦИКЛ</span></div>
 </section>
 <div class="cutaway-note"><span id="inspection-note">Нажми на карточку цилиндра, чтобы увеличить разрез.</span><span>86 × 86 mm · DOHC · 9.8 : 1</span></div>
-<section class="telemetry" aria-label="Показатели двигателя">
-<div class="meter rpm-meter"><div class="label">ОБОРОТЫ <span>rpm</span></div><div class="reading" id="rpm">880</div><div class="ticks" id="rpm-ticks" aria-hidden="true"></div></div>
-<div class="meter"><div class="label">ОХЛАЖДЕНИЕ <span>°C</span></div><div class="reading" id="temp">96</div><div class="micro">БЛОК <b id="water">86°</b><span>МАСЛО <b id="oil-temp">91°</b></span></div></div>
-<div class="meter"><div class="label">ДАВЛЕНИЕ <span>bar</span></div><div class="reading" id="pressure">1.8</div><div class="micro">МАСЛО <b id="oil">4.6 л</b><span id="oil-label">В СИСТЕМЕ</span></div></div>
-<div class="meter active-meter"><div class="label">В СТРОЮ <span>цил.</span></div><div class="reading"><span id="active">4</span><small>/ 4</small></div><div class="micro" id="survival">ВСЕ ЦИЛИНДРЫ РАБОТАЮТ</div></div>
-</section>
 <section class="cylinders" aria-label="Состояние каждого цилиндра">
 <div class="cyl" id="cyl0"><div><span>01</span><b>РАБОТАЕТ</b></div><div class="health"><i></i></div><div class="cyl-detail" id="cyl-detail0">100% · 104°</div></div>
 <div class="cyl" id="cyl1"><div><span>02</span><b>РАБОТАЕТ</b></div><div class="health"><i></i></div><div class="cyl-detail" id="cyl-detail1">100% · 104°</div></div>
 <div class="cyl" id="cyl2"><div><span>03</span><b>РАБОТАЕТ</b></div><div class="health"><i></i></div><div class="cyl-detail" id="cyl-detail2">100% · 104°</div></div>
 <div class="cyl" id="cyl3"><div><span>04</span><b>РАБОТАЕТ</b></div><div class="health"><i></i></div><div class="cyl-detail" id="cyl-detail3">100% · 104°</div></div>
 </section>
+<section class="dashboard" aria-label="Приборная панель испытательного стенда">
+  <div class="dash-heading"><span>ПУЛЬТ УПРАВЛЕНИЯ <b>/ 10</b></span><span id="dash-mode">СТРЕСС ×8</span></div>
+  <div class="dash-instruments">
+    <div class="tachometer"><svg id="tach-face" viewBox="0 0 300 244" aria-hidden="true"></svg><div class="tach-unit">ОБ/МИН ×1000</div><div class="tach-readout"><strong id="dash-rpm">750</strong><span>ОБОРОТЫ ВАЛА</span></div></div>
+    <div class="health-console">
+      <div class="warning-lamps" aria-label="Состояние систем"><span id="lamp-oil">МАСЛО</span><span id="lamp-coolant">ОЖ</span><span id="lamp-brake">ТОРМОЗ</span><span id="lamp-limit">ОТСЕЧКА</span><span id="lamp-assist">АНТИСТОП</span><span id="lamp-fan">ВЕНТИЛЯТОР</span></div>
+      <div class="health-readings">
+        <div><span>ОХЛАЖДЕНИЕ</span><strong id="dash-water">90°</strong><small>°C</small><div class="dash-bar"><i id="coolant-fill"></i></div></div>
+        <div><span>ДАВЛЕНИЕ МАСЛА</span><strong id="dash-oil">1.2</strong><small>bar</small><div class="dash-bar"><i id="oil-pressure-fill"></i></div></div>
+        <div id="brake-thermal"><span>ТЕМП. ТОРМОЗА</span><strong id="dash-brake-temp">24°</strong><small>°C</small><div class="dash-bar"><i id="brake-heat-fill"></i></div></div>
+        <div><span>БОРТСЕТЬ</span><strong id="dash-volts">14.0</strong><small>V</small><div class="cylinder-count">В СТРОЮ <b id="dash-cylinder">4 / 4</b></div></div>
+      </div>
+    </div>
+    <div class="load-console">
+      <div class="load-top"><span>ПОГЛОЩЕНИЕ СТЕНДА</span><svg class="dyno-preview" viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="48" r="36" fill="#243039" stroke="#819097" stroke-width="2"/><g id="dyno-rotor" stroke="#89999e" fill="none"><circle cx="48" cy="48" r="27"/><path d="M48 16v18m0 28v18M16 48h18m28 0h18M25 25l12 12m22 22l12 12M25 71l12-12m22-22l12-12" stroke-width="3"/></g><circle cx="48" cy="48" r="9" fill="#1a2329" stroke="#a8b7ba"/><rect id="dyno-caliper" x="68" y="30" width="17" height="37" rx="4" fill="#53616b" stroke="#a5b0b3"/></svg></div>
+      <div class="load-number"><strong id="dash-load">0.0</strong><span>кВт</span></div>
+      <div class="dash-bar load-bar"><i id="load-fill"></i></div>
+      <div class="load-stats"><span>ТОРМОЗНОЙ МОМЕНТ <b><span id="dash-torque">0</span> Н·м</b></span><span>ЭФФЕКТИВНОСТЬ <b id="dash-fade">100%</b></span><span>ПОГЛОЩЕНО <b><span id="dash-energy">0</span> кДж</b></span></div>
+    </div>
+  </div>
+  <div class="dash-bottom"><span class="dash-dot"></span><b id="dash-condition">ХОЛОСТОЙ ХОД</b><span>СТЕНД, НЕ АВТОМОБИЛЬ · НАГРУЗКА НА ВАЛ</span></div>
+</section>
+<section class="pedal-console" aria-label="Педали управления">
+  <div class="pedal-guidance"><span class="eyebrow">ДВЕ ПЕДАЛИ / НЕЗАВИСИМЫЙ ХОД</span><h2>Чувствуй нагрузку.</h2><p id="pedal-help">Выше по педали — сильнее нажатие.<br>Отпусти — педаль вернётся. Можно двумя пальцами.</p><span id="pedal-feedback">Тормоз разгружен</span><div class="keyboard-help"><kbd>W</kbd> / <kbd>↑</kbd> газ &nbsp; <kbd>S</kbd> / <kbd>↓</kbd> тормоз</div></div>
+  <div class="pedal-pair">
+    <button type="button" id="brake" class="pedal brake-pedal" aria-pressed="false" aria-label="Тормоз: удерживайте, выше сильнее" aria-describedby="pedal-help"><span class="pedal-name">ТОРМОЗ <small>S / ↓</small></span><span class="pedal-scale" aria-hidden="true"><i></i></span><span class="pedal-mechanism" aria-hidden="true"><span class="pedal-arm"></span><span class="pedal-face"><i></i><i></i><i></i><i></i></span><span class="pedal-hinge"></span></span><output>0%</output></button>
+    <button type="button" id="gas" class="pedal gas-pedal" aria-pressed="false" aria-label="Газ: удерживайте, выше сильнее" aria-describedby="pedal-help"><span class="pedal-name">ГАЗ <small>W / ↑</small></span><span class="pedal-scale" aria-hidden="true"><i></i></span><span class="pedal-mechanism" aria-hidden="true"><span class="pedal-arm"></span><span class="pedal-face"><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="pedal-hinge"></span></span><output>0%</output></button>
+  </div>
+</section>
+<section class="controls"><div class="narrative"><p class="eyebrow" id="event-label">ИСПЫТАНИЕ НА ВЫНОСЛИВОСТЬ</p><h2 id="event-title">Отступать некуда. Газуй.</h2><p id="event-detail">Держи газ. Отпусти, чтобы снизить нагрузку и охладить мотор.</p><div class="event-log" id="event-log" aria-live="polite" aria-atomic="true"></div></div></section>
+<details class="diagnostic-fold"><summary>Подробная телеметрия и трение</summary><section class="telemetry" aria-label="Показатели двигателя">
+<div class="meter rpm-meter"><div class="label">ОБОРОТЫ <span>rpm</span></div><div class="reading" id="rpm">880</div><div class="ticks" id="rpm-ticks" aria-hidden="true"></div></div>
+<div class="meter"><div class="label">ОХЛАЖДЕНИЕ <span>°C</span></div><div class="reading" id="temp">96</div><div class="micro">БЛОК <b id="water">86°</b><span>МАСЛО <b id="oil-temp">91°</b></span></div></div>
+<div class="meter"><div class="label">ДАВЛЕНИЕ <span>bar</span></div><div class="reading" id="pressure">1.8</div><div class="micro">МАСЛО <b id="oil">4.6 л</b><span id="oil-label">В СИСТЕМЕ</span></div></div>
+<div class="meter active-meter"><div class="label">В СТРОЮ <span>цил.</span></div><div class="reading"><span id="active">4</span><small>/ 4</small></div><div class="micro" id="survival">ВСЕ ЦИЛИНДРЫ РАБОТАЮТ</div></div>
+</section>
 <section class="instrument-strip" aria-label="Расчётные параметры двигателя">
 <div><span>МОЩНОСТЬ</span><b id="brake-power">0.0</b><small>кВт</small></div><div><span>МОМЕНТ</span><b id="brake-torque">0</b><small>Н·м</small></div><div><span>ВЫХЛОП / EGT</span><b id="exhaust-temp">310</b><small>°C</small></div><div><span>ВПУСК / MAP</span><b id="manifold">0.34</b><small>bar abs.</small></div><div><span>ТОПЛИВО</span><b id="fuel-rate">0.8</b><small>л/ч</small></div></section>
 <div class="electrical-strip"><span id="relay-reading">K1 / РЕЛЕ ВЕНТИЛЯТОРА</span><span id="performance-reading">АВТО</span></div>
 <section class="pulse-strip" aria-label="Неравномерность визуального вращения коленвала"><div><span id="pulse-state">ТОЛЧКИ КОЛЕНВАЛА</span><small>ЗАМЕДЛЕННАЯ КИНЕМАТИКА</small></div><canvas id="shaft-trace" aria-hidden="true"></canvas><div class="peak"><span>ПИК ЭТОГО МОТОРА</span><b id="best">880 rpm / 96°</b></div></section>
 <div class="contact-telemetry" id="contact-telemetry" aria-label="Трение и тепловое состояние">Модель контактного износа</div>
-<section class="controls"><div class="narrative"><p class="eyebrow" id="event-label">ИСПЫТАНИЕ НА ВЫНОСЛИВОСТЬ</p><h2 id="event-title">Отступать некуда. Газуй.</h2><p id="event-detail">Держи газ. Отпусти, чтобы снизить нагрузку и охладить мотор.</p><div class="event-log" id="event-log" aria-live="polite" aria-atomic="true"></div></div><button id="gas" type="button" aria-label="Газ: нажмите и удерживайте" aria-pressed="false"><span class="pedal-icon" aria-hidden="true">↗</span><span>ГАЗ<small>НАЖМИ И ДЕРЖИ</small></span><span class="pedal-lines" aria-hidden="true"></span></button></section>
+</details>
 <section class="utility-row" aria-label="Обслуживание стенда">
 <details class="journal-box"><summary>Журнал повреждений <span id="journal-count">0</span></summary><ol id="journal"></ol></details>
 <details class="settings"><summary>Настройки стенда</summary><div class="setting-actions">
@@ -54,7 +85,7 @@
 <button id="mute" type="button">Выключить звук</button><button id="motion" type="button">Уменьшить тряску</button><button id="reset" type="button">Новый мотор</button></div></details>
 </section>
 <p id="control-info" role="status"></p>
-<footer><span id="audio-status">ЗВУК С ПЕРВОГО НАЖАТИЯ</span><span class="keys">SPACE · ГАЗ &nbsp; M · ЗВУК &nbsp; R × 2 · НОВЫЙ МОТОР</span><span class="rule" id="model-note">РАСЧЁТНАЯ МОДЕЛЬ I4 · ПОСЛЕДНИЙ ЦИЛИНДР ПОДДЕРЖИВАЕТСЯ ИГРОВОЙ МЕХАНИКОЙ.</span></footer>
+<footer><span id="audio-status">ЗВУК С ПЕРВОГО НАЖАТИЯ</span><span class="keys">W / ↑ / SPACE · ГАЗ &nbsp; S / ↓ · ТОРМОЗ &nbsp; M · ЗВУК</span><span class="rule" id="model-note">РАСЧЁТНАЯ МОДЕЛЬ I4 · ПОСЛЕДНИЙ ЦИЛИНДР ПОДДЕРЖИВАЕТСЯ ИГРОВОЙ МЕХАНИКОЙ.</span></footer>
 </main>
 <noscript>Для запуска двигателя включите JavaScript.</noscript>
 </body></html>

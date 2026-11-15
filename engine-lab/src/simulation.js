@@ -33,7 +33,8 @@
       // A fixed 120 Hz caller supplies small timesteps. Reject invalid external input.
       if (!Number.isFinite(dt) || dt <= 0) return;
       dt = Math.min(dt, .05); this.time += dt;
-      this.throttle = approach(this.throttle, gas ? 1 : 0, gas ? 2.8 : 1.65, dt);
+      const input = gas === true ? 1 : Number.isFinite(gas) ? clamp(gas, 0, 1) : 0;
+      this.throttle = approach(this.throttle, input, input > this.throttle ? 5.5 : 8, dt);
       const t = this.throttle, active = this.activeCount;
       const viscosity = clamp(Math.exp(-(this.oilTemp - 95) / 65), .12, 1.3);
       const oilSupply = clamp(this.oil / 1.8, .025, 1);
@@ -83,7 +84,8 @@
       const imbalance = (4 - count) / 3;
       const ripple = (Math.sin(this.phase) * .7 + Math.sin(this.phase * 2.1) * .3) * (45 + imbalance * 220) * (.25 + t);
       // An intentional low-RPM torque assist prevents a terminal stall.
-      this.rpm = clamp(approach(this.rpm, Math.max(count === 1 ? 380 : 650, nominal + ripple), 1.8, dt), 320, 7250);
+      if (this.integrateShaft) this.integrateShaft(dt, t);
+      else this.rpm = clamp(approach(this.rpm, Math.max(count === 1 ? 380 : 650, nominal + ripple), 1.8, dt), 320, 7250);
       this.totalRevs += this.rpm / 60 * dt;
       // Slow visual crank speed keeps the four strokes readable; sound uses actual RPM.
       this.phase = (this.phase + (3.6 + Math.sqrt(this.rpm / 7000) * 22) * dt) % (TAU * 2);
