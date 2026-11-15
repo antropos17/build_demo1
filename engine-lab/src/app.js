@@ -16,6 +16,7 @@
   const motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
   sound.muted = prefs.muted === true; view.reduced = prefs.reduced === true || motionPreference.matches;
   let pointer = null, keys = new Set(), held = false, last = 0, acc = 0, hudTime = 0, saveTime = 0;
+  let inspecting = false;
   let frameMs = 16, pausedForTest = false, resetUntil = 0, resetTimer = null, logSignature = null;
   const dom = Object.fromEntries(['rpm', 'temp', 'water', 'oil-temp', 'pressure', 'oil', 'active', 'clock', 'status', 'caption',
     'event-label', 'event-title', 'event-detail', 'survival', 'event-log', 'audio-status', 'best', 'pulse-state', 'journal',
@@ -32,6 +33,7 @@
   function syncInput() {
     const next = pointer !== null || keys.size > 0, changed = next !== held; held = next;
     button.classList.toggle('pressed', held); button.setAttribute('aria-pressed', String(held));
+    if (held && changed && inspecting) setInspection(false);
     if (held && changed) sound.start().then(ok => { audioStatus(); if (!ok) dom['audio-status'].textContent = 'ЗВУК НЕДОСТУПЕН'; });
   }
   function release() { pointer = null; keys.clear(); syncInput(); }
@@ -45,12 +47,28 @@
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(type, releasePointer);
   window.addEventListener('pointerup', releasePointer); window.addEventListener('pointercancel', releasePointer);
   button.addEventListener('contextmenu', e => e.preventDefault());
+  function setInspection(value){
+    inspecting=value;last=0;acc=0;
+    $('inspect-pause').textContent=value?'Продолжить':'Пауза осмотра';$('inspect-pause').setAttribute('aria-pressed',String(value));
+    if(value){release();sound.suspend().catch(()=>{});}else sound.resume().catch(()=>{});
+    view.render(model);
+  }
+  $('inspect-pause').addEventListener('click',()=>setInspection(!inspecting));
+  for(const b of document.querySelectorAll('[data-view]'))b.addEventListener('click',()=>{
+    view.setView(b.dataset.view);document.querySelectorAll('[data-view]').forEach(n=>n.setAttribute('aria-pressed',String(n===b)));view.render(model);
+  });
+  $('zoom-out').addEventListener('click',()=>{view.zoom=1;$('inspection-note').textContent='Нажми на карточку цилиндра, чтобы увеличить разрез.';hud();view.render(model);});
+  cylDom.forEach((d,i)=>{
+    d.root.setAttribute('role','button');d.root.setAttribute('tabindex','0');d.root.title='Увеличить цилиндр '+(i+1);
+    const focus=()=>{view.setFocus(i);hud();view.render(model);};d.root.addEventListener('click',focus);
+    d.root.addEventListener('keydown',e=>{if(e.code==='Enter'||e.code==='Space'){e.preventDefault();e.stopPropagation();focus();}});
+  });
   function persist() {
     if (testing) return;
     try { localStorage.setItem(storageKey, JSON.stringify(model.snapshot())); localStorage.setItem(prefsKey, JSON.stringify({ muted: sound.muted, reduced: view.reduced })); } catch (_) {}
   }
   function newEngine() {
-    release(); model = new Engine(); view.reset(); sound.update(model); logSignature = null; resetUntil = 0;
+    release(); inspecting=false; view.zoom=1; $('inspect-pause').textContent='Пауза осмотра'; $('inspect-pause').setAttribute('aria-pressed','false'); model = new Engine(); view.reset(); sound.update(model); logSignature = null; resetUntil = 0;
     clearTimeout(resetTimer); dom.reset.textContent = 'Новый мотор'; dom['control-info'].textContent = 'Новый мотор. Начинаем с четырёх цилиндров.';
     dom['event-log'].textContent = ''; persist(); hud(); view.render(model); drawTrace();
   }
@@ -67,7 +85,7 @@
   motionPreference.addEventListener?.('change', e => { if (e.matches) view.reduced = true; audioStatus(); });
   window.addEventListener('keydown', e => {
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable) return;
-    const otherControl = e.target.closest?.('button,summary') && e.target !== button;
+    const otherControl = e.target.closest?.('button,summary,[role=button]') && e.target !== button;
     if (!otherControl && (['Space', 'ArrowUp'].includes(e.code) || (e.code === 'Enter' && e.target === button))) { e.preventDefault(); keys.add(e.code); syncInput(); }
     if (e.code === 'KeyM' && !e.repeat) { sound.mute(); audioStatus(); persist(); }
     if (e.code === 'KeyR' && !e.repeat) requestReset();
@@ -75,7 +93,7 @@
   window.addEventListener('keyup', e => { if (keys.delete(e.code)) syncInput(); });
   window.addEventListener('blur', release);
   const suspend = () => { release(); last = 0; acc = 0; persist(); sound.suspend().catch(() => {}); };
-  const resume = () => { last = 0; acc = 0; sound.resume().catch(() => {}); };
+  const resume = () => { last = 0; acc = 0; if(!inspecting) sound.resume().catch(() => {}); };
   document.addEventListener('visibilitychange', () => document.hidden ? suspend() : resume());
   window.addEventListener('pagehide', suspend); window.addEventListener('pageshow', resume);
   window.addEventListener('resize', () => { view.resize(); view.render(model); drawTrace(); });
@@ -118,9 +136,12 @@
       d.root.className = 'cyl' + (!cy.active ? ' off' : isLast ? ' last' : cy.wear > .35 ? ' worn' : '');
       d.name.textContent = !cy.active ? (cy.failure === 'ejected' ? 'ПОРШЕНЬ ВЫБИТ' : 'ОБРЫВ ШАТУНА') : isLast ? 'ДЕРЖИТСЯ' : cy.wear > .65 ? 'ПРОПУСКИ' : cy.wear > .35 ? 'ИЗНОС' : 'РАБОТАЕТ';
       d.bar.style.width = (cy.active ? cy.compression * 100 : 0) + '%';
-      d.detail.textContent = cy.active ? `${Math.round(cy.compression * 100)}% · ${Math.round(cy.temp)}°` : 'ОТКЛЮЧЁН';
+      d.detail.textContent = cy.active ? `${Math.round(cy.compression * 100)}% · ${Math.round(cy.contact.wallTemp)}°` : 'ОТКЛЮЧЁН';
+      d.root.setAttribute('aria-pressed',String(view.zoom>1&&view.focus===i));
       d.root.setAttribute('aria-label', `Цилиндр ${i + 1}: ${d.name.textContent.toLowerCase()}, компрессия ${Math.round(cy.compression * 100)} процентов`);
     });
+    const f=model.frictionNm; $('contact-telemetry').textContent=`ТРЕНИЕ (МОДЕЛЬ) · КОЛЬЦА ${f.rings.toFixed(1)} · ЮБКИ ${f.skirts.toFixed(1)} · ВКЛАДЫШИ ${f.bearings.toFixed(1)} · ГРМ ${f.valves.toFixed(1)} Н·м  /  ГБЦ ${Math.round(model.headTemp)}°C`;
+    if(view.zoom>1){const cy=model.cylinders[view.focus];$('inspection-note').textContent=`Цилиндр ${cy.id+1}: ${cy.cycle.name.toLowerCase()} · плёнка ${cy.contact.filmMicron.toFixed(1)} мкм · задиры ${Math.round(cy.contact.liner*100)}%`;}
     journal();
   }
   const traceCanvas = $('shaft-trace'), trace = traceCanvas.getContext('2d');
@@ -135,7 +156,7 @@
   }
   function frame(now) {
     requestAnimationFrame(frame);
-    if (document.hidden || pausedForTest) { last = 0; return; }
+    if (document.hidden || pausedForTest || inspecting) { last = 0; return; }
     const raw = last ? (now - last) / 1000 : 1 / 60; last = now;
     const dt = Math.min(.06, Math.max(0, raw)); frameMs = frameMs * .98 + raw * 1000 * .02;
     acc += dt; let n = 0; while (acc >= 1 / 120 && n++ < 8) { model.step(1 / 120, held); acc -= 1 / 120; }
@@ -146,7 +167,7 @@
   }
   if (saved) { dom['event-log'].textContent = 'Мотор и история повреждений восстановлены.'; view.restoreDebris(model); }
   if (testing) window.__engineLab = {
-    get engine() { return model; }, get renderer() { return view; }, get audio() { return sound; }, get held() { return held; }, get frameMs() { return frameMs; },
+    get inspecting() { return inspecting; }, get engine() { return model; }, get renderer() { return view; }, get audio() { return sound; }, get held() { return held; }, get frameMs() { return frameMs; },
     pause(value = true) { pausedForTest = value; last = 0; },
     advance(seconds, gas = true, visual = false) {
       for (let n = 0; n < Math.round(seconds * 120); n++) { model.step(1 / 120, gas); events(); if (visual && n % 2 === 0) view.update(1 / 60, model); }

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.0 / 2026-11-15
+
+- Rebuilt neutral-metal cutaway, lined/cross-honed bores, ring packs, crank counterweights, I-beam rods, five bearing caps, cam rows, valves, water jackets and oil jets.
+- Added 720-degree stroke state, half-speed cams, analytic pressure diagnostics and per-node contact wear with compression and thermal feedback.
+- Added deterministic scoring, material-transfer patches, progressive branched cracks and persistent damaged-rod geometry.
+- Added section/oil/thermal/wear display layers, cylinder zoom, inspection pause and keyboard-accessible cylinder cards.
+- Added validated v3 save migration without cylinder resurrection.
+- 32 automated tests and 35 Chromium checks passed. Actual browser checks used inline HTML because this environment blocks URL navigation; no claim of hosted-origin or physical-phone verification.
+- Retained indefinite last-piston survival and bounded effects.
+
 ## 0.7.0 / 2026-11-15
 
 ### Added
