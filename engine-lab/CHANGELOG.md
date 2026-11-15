@@ -1,12 +1,23 @@
 # Changelog
 
+## 0.13.0 / 2026-11-15
+
+- Embedded six downloaded and hash-verified CC0 WAVs; audio works offline.
+- Fixed loop seams, starter cancellation, repeated-start node duplication and audio teardown.
+- Added independent engine/mechanical volume controls and actual-recording browser checks.
+- Authored eight SVG mechanical assets; cached atlas, five live part-inspection views.
+- Detailed radiator, fan, filter bypass, pump, thermostat, fluid windows and muffler packing.
+- Reused contact geometry workspaces; stopped trapped debris no longer releases on wall-clock age.
+- Verified with 101 Node tests and 48 Chromium checks. See RELEASE-13.md.
+
 ## 0.12.0 / 2026-11-15
 
-- Recorded-sound player with six credited CC0 sources, visible network failure and optional offline embed tool. Source binaries were not downloadable here.
-- Finite oil/coolant cells, visible hose flow, thermostat bypass, vapour and contamination.
-- Internal contact bodies, jamming, shearing, drag and secondary wear; persistent v7 saves.
-- Sectioned silencer, collector leaks and bounded separated smoke sources.
-- New regression checks; see RELEASE-12.md for evidence and limitations.
+- Added internal fragment contact zones, jams, secondary scoring, oil contamination and safe v7 persistence.
+- Added conservative oil/coolant circuit inventories, visible flow, bubbles, thermostat routing and filter bypass.
+- Rebuilt staged exhaust, baffle cutaway, localized leak sources and denser bounded smoke.
+- Replaced active synthetic audio with a six-source CC0 sample player; original binaries are NOT bundled in this release.
+- Added source credits and a downloader for optional offline packaging. Actual sample downloads were blocked here; generated audio test fixtures are not distributed.
+- 91 Node tests and 45 Chromium checks passed. See RELEASE-12.md.
 
 ## 0.11.0 / 2026-11-15
 

@@ -1,6 +1,6 @@
-# Sound sources and redistribution
+# Audio and SVG provenance / 0.13
 
-Six explicitly credited audio files. This release provides the sample player and source manifest; it does NOT contain downloaded originals. Audio is requested on the first user gesture. Simulation and graphics work offline. If network/CORS/media access fails, an error is shown instead of switching back to the synthetic engine.
+This release includes six downloaded CC0 WAV source files in `assets/audio/` and embeds the same bytes in `assets/soundbank.js`. Source SHA-256, duration and original PCM properties are recorded in `assets/audio-manifest.json`. `npm run assets:verify` checks originals against the embedded bank and recorded hashes.
 
 ## Sources
 
@@ -22,10 +22,14 @@ These are generic engine and mechanical recordings, NOT a factory-recorded acous
 
 ## Offline packaging
 
-Run `npm run audio:fetch` on a machine with internet access, then `npm run build`. The downloader checks WAV headers and size, writes base64 to `assets/soundbank.js`, and records source URLs, credits and SHA-256 hashes in `assets/audio-manifest.json`. Files are embedded only after every download succeeds. Failure leaves the existing soundbank unchanged. Keep this file with redistributed builds.
+The delivered HTML includes all six recordings and all eight SVG components. No audio download is required at runtime. `npm run audio:fetch` reuses hash-verified local originals and downloads only missing or damaged files. A changed upstream hash requires manual provenance review; any failure leaves the existing bank untouched. `npm run build` creates the portable HTML.
 
-Playback processing: mono downmix, bounded gain normalization, 35 ms loop overlap, restrained playback-rate variation, filtered equal-power RPM crossfades and limited simultaneous one-shots. No synthetic engine is used as an error fallback.
+The files were retrieved in a dedicated GitHub Actions helper branch, `engine-lab-audio13-assets`, with hashes checked before being copied into the main project source. The workflow is not merged into the parent application's main branch.
 
-## Verification limitation
+Runtime processing: mono downmix, DC removal, peak-limited gain normalization, a loop-boundary overlap of up to 35 ms, filtered equal-power RPM crossfades and at most 12 simultaneous one-shots. The originals remain unchanged. Source recordings are generic, not an acoustically calibrated production I4. Browser tests decode the ACTUAL embedded recordings with HTTP blocked and measure nonzero bounded playback. No synthetic fixture replaces a source in the shipped files. There was no subjective listening evaluation in this environment.
 
-The build environment could read source/license pages but could not download audio binaries. Therefore the actual recordings were not auditioned, and their end-to-end loading cannot be claimed as tested. Browser audio tests inject a generated WAV fixture in memory to test decoding, looping, mixing and lifecycle only. That fixture is never written to the delivered HTML or archive.
+## Original SVG work
+
+`assets/svg/` contains radiator-core, fan-rotor, filter-cutaway, pump-cutaway, pump-impeller, thermostat-cutaway, muffler-cutaway and flange. These vector assets were authored for Last Piston, not copied from third-party packs. `tools/make-svg-assets.py` reproducibly creates their source, manifest and embedded atlas. All SVGs have titles and contain only local vector primitives. No font files, remote images or scripts are embedded. Source hashes are in `assets/svg-manifest.json`.
+
+Static SVG surfaces are decoded once into a bounded atlas; moving rotors, valves, liquid windows, contamination and exhaust pulses follow the existing simulation rather than playing a detached animation.

@@ -1,53 +1,59 @@
-name: Last Piston licensed audio pack
+name: Last Piston 13 asset verification
 on:
   push:
     branches: [engine-lab-audio13-assets]
     paths: [.github/workflows/last-piston-audio.yml]
 permissions:
   contents: write
-  actions: read
 jobs:
-  preserve:
+  verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: engine-lab-audio13-assets
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: last-piston-cc0-recordings
-          run-id: 43751324460
-          github-token: ${{ github.token }}
-          path: audio-originals
-      - name: Verify source hashes and create offline bank
-        shell: bash
+      - name: Apply guarded integration and generate original SVG atlas
         run: |
+          python3 .github/last-piston-upgrade13.py
+          python3 engine-lab/tools/make-svg-assets.py
           python3 - <<'PY'
-          import pathlib,json,hashlib,base64,shutil
-          source=pathlib.Path('audio-originals')
-          target=pathlib.Path('engine-lab/assets/audio')
-          target.mkdir(parents=True,exist_ok=True)
-          manifest=json.loads((source/'manifest.json').read_text())
-          bank={}
-          for row in manifest:
-              name=row['id']
-              assert name in ['idle','load','starter','impact','rattle','click']
-              assert row['license']=='CC0-1.0' and row['status']=='downloaded'
-              raw=(source/(name+'.wav')).read_bytes()
-              assert hashlib.sha256(raw).hexdigest()==row['sha256']
-              (target/(name+'.wav')).write_bytes(raw)
-              bank[name]=base64.b64encode(raw).decode('ascii')
-          assert len(bank)==6
-          pathlib.Path('engine-lab/assets/soundbank.js').write_text('/* Verified CC0 source recordings. SHA-256 and attribution: audio-manifest.json. */\nwindow.Piston.EMBEDDED_AUDIO='+json.dumps(bank,separators=(',',':'))+';\n')
+          from pathlib import Path
+          p=Path('engine-lab/CHANGELOG.md')
+          s=p.read_text();a=s.index('## 0.12.0');b=s.index('## 0.11.0')
+          s=s[:a]+'''## 0.12.0 / 2026-11-15
+
+          - Recorded-sound player with six credited CC0 sources, visible network failure and optional offline embed tool. Source binaries were not downloadable here.
+          - Finite oil/coolant cells, visible hose flow, thermostat bypass, vapour and contamination.
+          - Internal contact bodies, jamming, shearing, drag and secondary wear; persistent v7 saves.
+          - Sectioned silencer, collector leaks and bounded separated smoke sources.
+          - New regression checks; see RELEASE-12.md for evidence and limitations.
+
+          '''+s[b:];p.write_text(s)
           PY
-      - name: Commit only assets to the helper branch
-        shell: bash
+      - name: Verify asset hashes, run model regressions and build standalone
+        working-directory: engine-lab
+        run: |
+          npm run assets:verify
+          npm test | tee test-output.txt
+          npm run build
+      - name: Commit verified generated files only to the helper branch
         run: |
           test "$(git branch --show-current)" = "engine-lab-audio13-assets"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add engine-lab/assets/audio/*.wav engine-lab/assets/soundbank.js
-          git diff --cached --quiet && exit 0
-          git commit -m 'assets: preserve six verified CC0 recordings and offline soundbank'
+          git add engine-lab/index.html engine-lab/src/app.js engine-lab/src/internals.js engine-lab/tests/build.test.cjs engine-lab/package.json engine-lab/assets/svg engine-lab/assets/svg-manifest.json engine-lab/assets/mechanical-atlas.js engine-lab/CHANGELOG.md
+          git diff --cached --quiet || git commit -m 'build: verify 0.13 offline audio and generated mechanical atlas'
           git push origin HEAD:engine-lab-audio13-assets
+          mkdir -p verified-pack
+          cp engine-lab/dist/last-piston.html verified-pack/
+          cp engine-lab/test-output.txt verified-pack/
+          git rev-parse HEAD > verified-pack/commit.txt
+          git ls-tree -r HEAD:engine-lab > verified-pack/source-tree.txt
+          git archive HEAD engine-lab > verified-pack/source.tar
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: last-piston-13-verified-source
+          path: verified-pack
+          retention-days: 7
+          if-no-files-found: error
