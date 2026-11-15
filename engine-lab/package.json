@@ -1,11 +1,12 @@
 {
   "name": "last-piston",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "private": true,
   "description": "A two-pedal cutaway engine and inertial test stand that survives on one cylinder.",
   "scripts": {
     "test": "node --test tests/*.test.cjs",
-    "build": "node tools/build.cjs"
+    "build": "node tools/build.cjs",
+    "audio:fetch": "node tools/fetch-audio.cjs"
   },
   "engines": {
     "node": ">=20"

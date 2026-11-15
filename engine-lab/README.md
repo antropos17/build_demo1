@@ -1,58 +1,50 @@
-# Last Piston / Engine Lab 11
+# Last Piston / Engine Lab 12
 
-A browser cutaway engine with a lower instrument cluster, analogue accelerator and brake. The last piston keeps going.
+A cutaway engine sandbox with manual ignition, analogue gas/brake, finite fluids and internal wreckage. The last working piston survives.
 
 ## Run
 
 ```sh
-cd engine-lab
 npm test
 npm run build
 ```
 
-Open `dist/last-piston.html` directly in a browser. It is fully self-contained. No runtime packages, API keys, remote assets, backend or trackers are required. The modular `index.html` can also be served by any static server.
+Open `dist/last-piston.html`. The engine, graphics, controls and persistence work offline. **Recorded audio requires network access in this distribution.** Audio sources, credits and exact limitations are in `SOURCES.md` and in the app's sound section.
 
-## Start and stop
+To embed recordings for an offline build on a connected machine:
 
-Click **ЗАПУСК** before pressing the pedals. The starter cranks, the engine catches, and the alternator takes over. **ЗАГЛУШИТЬ** manually cuts ignition without repairing anything. A weak battery can be charged using **Пусковое питание АКБ** in settings; this is not an engine reset.
+```sh
+npm run audio:fetch
+npm run build
+```
+
+No account, API key or runtime package is required. The download script does not overwrite an existing soundbank unless all source files succeed.
 
 ## Controls
 
-| Input | Gas | Brake |
-| --- | --- | --- |
-| Touch or mouse | Hold the right pedal; drag higher for more travel | Hold the left pedal; drag higher for more travel |
-| Keyboard | W, Arrow Up, or Space | S, Arrow Down, or B |
-| Focused pedal | Enter or Space | Enter or Space |
+Click **ЗАПУСК**. Hold either pedal; a higher pointer position applies more travel. Two fingers can independently operate gas and brake. W / Arrow Up / Space applies gas; S / Arrow Down / B applies brake. Release is momentary. M toggles sound. R twice confirms a new engine. Manual key-off preserves wear and internal fragments.
 
-Two fingers work at once. Each pedal is momentary and returns on release. Keyboard travel is progressive. M toggles sound. R twice within four seconds resets the engine. Graphical settings, normal/stress mode, volume and reduced shake remain available. Hidden tabs pause audio and simulation.
+Click a cylinder card for zoom. Inspection pause and section/oil/thermal/wear layers remain available. Settings contain graphics quality, reduced motion, volume, normal/stress mode and battery support. The brake loads a stationary test stand, not a fictional vehicle.
 
-## What's new in 0.11
+## Version 0.12
 
-Manual ignition, battery state/current/voltage, starter engagement and heat, speed-dependent alternator output with mechanical load, and fan after-run. Added actual stand brake, flywheel ring gear, starter/pinion and battery artwork. Sound distinguishes cranking, combustion, key-off coast and stopped silence. Version-6 save migration keeps damage and never resumes a held starter. See `RELEASE-11.md` for assumptions and checks.
+- Recorded engine/mechanical sample PLAYER with six credited CC0 source files, no synthetic fallback.
+- Transported oil/coolant, visible hose flow, thermostat bypass, bubbles and contamination-sensitive oil filter.
+- 64 bounded internal fragment bodies, moving-surface contacts, pinching, friction, shearing and secondary damage.
+- Sectioned exhaust silencer, upstream leaks and separated finite-inventory smoke sources.
+- Version-7 persistence and new diagnostics. Existing electrical, pedal and last-piston rules retained.
 
-## Previous 0.10 foundation
+This is a simplified 2D contact/finite-volume game model, not a production-engine digital twin or CFD simulation. Generic engine recordings are not a factory soundtrack of the depicted I4. See `RELEASE-12.md` for test scope and assumptions.
 
-A bottom dashboard with a tachometer, warning lamps, oil pressure, coolant, brake heat, supply voltage, absorbed torque/power/energy and a rotor preview. Engine RPM comes from a torque/inertia balance, not a pedal-to-RPM animation. The brake adds shaft load and produces heat, fade and wear. Limiter and overrun fuel cut are heard in the existing continuous audio engine.
+## Main additions
 
-This is a stationary test stand, not a driving simulator. There is no invented km/h display. Explicit low-speed assistance protects the last cylinder; mechanical aging and stress-test heating are intentionally accelerated. All non-rated physical constants are illustrative model assumptions.
-
-Version-5 saves migrate old damage, never held inputs. Previous journal, smoke, oil, cooling relay, cylinder zoom, four inspection layers, finite fluids and bounded cached rendering are retained.
-
-## Project structure
-
-- `src/simulation.js`, `dynamics.js`, `mechanics.js`, `powertrain.js`: base model and thermal/electrical subsystems.
-- `src/ignition.js`, `bench.js`, `ignition-panel.js`, `ignition.css`: start/stop, electrical state and hardware/instruments.
-- `src/dyno.js`: analogue commands, shaft inertia, limiter, brake absorption, heat/fade and v5 persistence.
-- `src/pedals.js`: independent pointer/key ownership and safe input release.
-- `src/dashboard.js`, `dashboard.css`: retained SVG instruments and pedal materials.
-- `src/renderer.js`, `workshop.js`, `cutaway.js`, `effects.js`: cutaway and cached visual effects.
-- `src/audio.js`: one continuous worklet/buffered DSP.
-- `src/app.js`: lifecycle, fixed-step loop, settings and telemetry.
-
-## Verification
-
-75 Node tests and 53 Chromium checks passed in this iteration. Run `npm test`, `npm run build`, then optionally `python tools/check_ignition.py` with Playwright and Chromium installed. See `RELEASE-11.md` for exact scope and limitations. The environment used inline HTML and buffered audio, not physical mobile hardware or the AudioWorklet browser host.
+`src/internals.js`: model-owned contact physics, fluid circuits and save migration.
+`src/realism-view.js`: pipes, exhaust and internal fragments.
+`src/sample-bank.js`, `src/sample-audio.js`: source credits and recorded-buffer audio.
+`assets/soundbank.js`: optional offline payload, empty in the online-audio distribution.
+`tools/fetch-audio.cjs`: verified-format downloader and embedding.
+`tests/internals.test.cjs`, `tools/check_realism.py`: regression coverage.
 
 ## Repository boundary
 
-Work only in `engine-lab/` on branch `engine-lab` of `antropos17/build_demo1`. Do not modify or merge the parent application without a separate request. Build output is ignored; generate the portable HTML locally.
+Only `engine-lab/` on branch `engine-lab` of `antropos17/build_demo1`. Do not modify or merge the parent application without a separate request. No game-over, automatic restart or zero-active-cylinder terminal state. Only manual key-off stops the survivor.

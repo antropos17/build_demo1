@@ -30,7 +30,7 @@
   const ticks = [...$('rpm-ticks').children];
   const fmt = t => { const s = Math.max(0, Math.floor(t)); return (s >= 3600 ? String(Math.floor(s / 3600)).padStart(2, '0') + ':' : '') + String(Math.floor(s / 60) % 60).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
   function audioStatus() {
-    dom['audio-status'].textContent = sound.muted ? 'ЗВУК ВЫКЛЮЧЕН' : sound.ready ? 'ЗВУК ДВИГАТЕЛЯ АКТИВЕН' : 'ЗВУК С ПЕРВОГО НАЖАТИЯ';
+    dom['audio-status'].textContent = sound.muted ? 'ЗВУК ВЫКЛЮЧЕН' : sound.ready ? 'ЗАПИСИ ДВИГАТЕЛЯ · CC0' : sound.status.includes('не загрузилось') ? 'ЗАПИСИ НЕДОСТУПНЫ: ПРОВЕРЬ СЕТЬ' : 'ЗАПИСИ ЗАГРУЖАЮТСЯ ПРИ ЗАПУСКЕ';
     dom.mute.textContent = sound.muted ? 'Включить звук' : 'Выключить звук'; dom.mute.setAttribute('aria-pressed', String(!sound.muted));
     dom.motion.textContent = view.reduced ? 'Вернуть тряску' : 'Уменьшить тряску'; dom.motion.setAttribute('aria-pressed', String(view.reduced));
   }
@@ -103,7 +103,7 @@
   function events() {
     for (const e of model.drainEvents()) {
       if (e.type !== 'brakeHeat') { if (!['starter','keyOff','ignition','battery','startFailed'].includes(e.type)) view.event(e, model); sound.event(e); }
-      if (e.type !== 'backfire' && e.type !== 'relay') dom['event-log'].textContent = `${fmt(e.time)} / ${e.message}`;
+      if (e.type !== 'backfire' && e.type !== 'relay' && e.type !== 'impact') dom['event-log'].textContent = `${fmt(e.time)} / ${e.message}`;
     }
   }
   function journal() {
@@ -149,6 +149,12 @@
     $('exhaust-temp').textContent=Math.round(model.sensor.egt); $('manifold').textContent=model.manifoldBar.toFixed(2); $('fuel-rate').textContent=model.fuelLh.toFixed(1);
     const r=model.relay; $('relay-reading').textContent=`K1 · ${r.heatTrip?'ТЕРМОЗАЩИТА':r.closed?'ЗАМКНУТО':'РАЗОМКНУТО'} · ${r.voltage.toFixed(1)} V · ${r.current.toFixed(1)} A · контакты ${Math.round(r.contactTemp)}°C · катушка ${Math.round(r.coilTemp)}°C`;
     $('model-note').textContent=(model.profile==='stress'?'СТРЕСС ×8: НАГРЕВ И ИЗНОС УСКОРЕНЫ. ':'ОБЫЧНЫЙ ТЕМП НАГРЕВА. ')+'I4, РЕЙТИНГ 110 кВт / 192 Н·м. РАСЧЁТНЫЕ ДАННЫЕ. ПОСЛЕДНИЙ ЦИЛИНДР НЕ ОСТАНАВЛИВАЕТСЯ.';
+    $('oil-flow').textContent=model.oilCircuit.q.toFixed(1);$('water-flow').textContent=model.waterCircuit.q.toFixed(1);
+    $('inside-fragments').textContent=model.fragments.bodies.length;$('debris-torque').textContent=model.fragments.resistance.toFixed(1);
+    $('oil-filter').textContent='Загрязнение '+Math.round(model.oilCircuit.filterLoad*100)+'%'+(model.oilCircuit.bypass>.02?' · байпас':'');
+    $('vapour-state').textContent=model.waterCircuit.vapour>.08?'Газовая фаза '+Math.round(model.waterCircuit.vapour*100)+'%':'Без паровых пробок';
+    $('jam-state').textContent=model.fragments.jamCount?'Зажато '+model.fragments.jamCount+' · трёт металл':'Зажатых нет';
+    $('impact-count').textContent=model.fragments.impacts.toLocaleString('ru-RU')+' столкновений';
     journal(); dashboard.update(model); ignitionPanel.update(model);
     if (model.ignition !== 'running') {
       dom['event-title'].textContent = model.ignition === 'cranking' ? 'Стартер крутит. Ждём вспышку.' : model.rpm > 5 ? 'Вал останавливается.' : 'Ключ выключен. Мотор сохранён.';
@@ -204,5 +210,7 @@
     stepInputs(seconds = 1) { for (let i=0; i<Math.round(seconds*120); i++) { pedals.update(1/120); model.step(1/120,pedals.gas,pedals.brake); } events(); hud(); view.render(model); },
     reset: newEngine
   };
+  for(const item of Object.values(window.Piston.SAMPLES)){const a=document.createElement('a');a.href=item.source;a.target='_blank';a.rel='noopener';a.textContent=item.title+' / '+item.author+' / '+item.license;$('sample-credits').append(a);}
+  $('reload-audio').addEventListener('click',()=>sound.start().then(()=>{audioStatus();sound.notify();}));
   audioStatus(); hud(); view.render(model); requestAnimationFrame(frame);
 })();

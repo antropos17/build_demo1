@@ -11,14 +11,15 @@
 <link rel="stylesheet" href="instrument.css">
 <link rel="stylesheet" href="dashboard.css">
 <link rel="stylesheet" href="ignition.css">
+<link rel="stylesheet" href="realism.css">
 <script defer src="src/simulation.js"></script>
-<script defer src="src/dynamics.js"></script><script defer src="src/mechanics.js"></script><script defer src="src/powertrain.js"></script><script defer src="src/dyno.js"></script><script defer src="src/ignition.js"></script><script defer src="src/audio.js"></script>
-<script defer src="src/mechanical-audio.js"></script><script defer src="src/renderer.js"></script>
-<script defer src="src/workshop.js"></script><script defer src="src/cutaway.js"></script><script defer src="src/effects.js"></script><script defer src="src/bench.js"></script><script defer src="src/pedals.js"></script><script defer src="src/dashboard.js"></script><script defer src="src/ignition-panel.js"></script><script defer src="src/app.js"></script>
+<script defer src="src/dynamics.js"></script><script defer src="src/mechanics.js"></script><script defer src="src/powertrain.js"></script><script defer src="src/dyno.js"></script><script defer src="src/ignition.js"></script><script defer src="src/internals.js"></script><script defer src="src/audio.js"></script>
+<script defer src="src/mechanical-audio.js"></script><script defer src="src/sample-bank.js"></script><script defer src="assets/soundbank.js"></script><script defer src="src/sample-audio.js"></script><script defer src="src/renderer.js"></script>
+<script defer src="src/workshop.js"></script><script defer src="src/cutaway.js"></script><script defer src="src/effects.js"></script><script defer src="src/bench.js"></script><script defer src="src/realism-view.js"></script><script defer src="src/pedals.js"></script><script defer src="src/dashboard.js"></script><script defer src="src/ignition-panel.js"></script><script defer src="src/app.js"></script>
 </head>
 <body>
 <main class="lab">
-<header class="masthead"><div class="wordmark"><svg aria-hidden="true" viewBox="0 0 36 40"><path d="M6 3h24v16H6zM6 8h24M6 13h24M18 19v12M12 31a6 6 0 1 0 12 0a6 6 0 1 0-12 0"/></svg><div><p class="eyebrow">ENGINE LAB / 11</p><h1>LAST PISTON<span>.</span></h1></div></div><div class="session"><span class="live-dot"></span><span>ДЕРЖИТСЯ ДО ПОСЛЕДНЕГО</span><strong id="clock">00:00</strong></div></header>
+<header class="masthead"><div class="wordmark"><svg aria-hidden="true" viewBox="0 0 36 40"><path d="M6 3h24v16H6zM6 8h24M6 13h24M18 19v12M12 31a6 6 0 1 0 12 0a6 6 0 1 0-12 0"/></svg><div><p class="eyebrow">ENGINE LAB / 12</p><h1>LAST PISTON<span>.</span></h1></div></div><div class="session"><span class="live-dot"></span><span>ДЕРЖИТСЯ ДО ПОСЛЕДНЕГО</span><strong id="clock">00:00</strong></div></header>
 <nav class="inspection-tools" aria-label="Слои разреза">
 <div class="view-modes"><button type="button" data-view="section" aria-pressed="true">Разрез</button><button type="button" data-view="oil" aria-pressed="false">Смазка</button><button type="button" data-view="thermal" aria-pressed="false">Температуры</button><button type="button" data-view="damage" aria-pressed="false">Износ</button></div>
 <div class="inspection-actions"><button type="button" id="inspect-pause" aria-pressed="false">Пауза осмотра</button><button type="button" id="zoom-out">Общий вид</button></div>
@@ -35,12 +36,18 @@
 <div class="cyl" id="cyl2"><div><span>03</span><b>РАБОТАЕТ</b></div><div class="health"><i></i></div><div class="cyl-detail" id="cyl-detail2">100% · 104°</div></div>
 <div class="cyl" id="cyl3"><div><span>04</span><b>РАБОТАЕТ</b></div><div class="health"><i></i></div><div class="cyl-detail" id="cyl-detail3">100% · 104°</div></div>
 </section>
+<section class="realism-strip" aria-label="Жидкости и внутренние столкновения">
+<div><span>ЦИРКУЛЯЦИЯ МАСЛА</span><b id="oil-flow">0.0</b><small>л/мин</small><em id="oil-filter">Фильтр чистый</em></div>
+<div><span>КОНТУР ОХЛАЖДЕНИЯ</span><b id="water-flow">0.0</b><small>л/мин</small><em id="vapour-state">Без паровых пробок</em></div>
+<div><span>ОСКОЛКИ В БЛОКЕ</span><b id="inside-fragments">0</b><small>шт.</small><em id="jam-state">Зажатых нет</em></div>
+<div><span>ТРЕНИЕ ОСКОЛКОВ</span><b id="debris-torque">0.0</b><small>Н·м</small><em id="impact-count">0 столкновений</em></div>
+</section>
 <section class="ignition-console" aria-label="Зажигание и электропитание">
 <div class="key-section"><button id="ignition-key" class="key-switch" data-state="off" type="button" aria-label="Запустить двигатель"><span class="key-dial" aria-hidden="true"><i class="key-blade"></i></span><span id="key-action">ЗАПУСК</span></button><div class="key-copy"><strong id="key-state">ЗАЖИГАНИЕ ВЫКЛЮЧЕНО</strong><span id="start-message" role="status">Поверни ключ для запуска</span></div></div>
 <div class="electrical-cluster"><div class="power-readings"><div><label for="battery-charge">ЗАРЯД АКБ</label><output id="battery-charge">82%</output><div class="battery-track" aria-hidden="true"><i id="battery-meter"></i></div></div><div><label for="battery-current">ТОК АКБ ±</label><output id="battery-current">0.0</output><small>A</small></div><div><label for="alternator-current">ГЕНЕРАТОР</label><output id="alternator-current">0.0</output><small>A</small></div><div><label for="starter-current">СТАРТЕР</label><output id="starter-current">0</output><small>A</small></div></div><div class="power-foot"><span id="lamp-charge">● АКБ</span><span id="charge-status">РЕЖИМ ОЖИДАНИЯ</span><span>СТАРТЕР <b id="starter-heat">30 °C</b></span></div></div>
 </section>
 <section class="dashboard" aria-label="Приборная панель испытательного стенда">
-  <div class="dash-heading"><span>ПУЛЬТ УПРАВЛЕНИЯ <b>/ 11</b></span><span id="dash-mode">СТРЕСС ×8</span></div>
+  <div class="dash-heading"><span>ПУЛЬТ УПРАВЛЕНИЯ <b>/ 12</b></span><span id="dash-mode">СТРЕСС ×8</span></div>
   <div class="dash-instruments">
     <div class="tachometer"><svg id="tach-face" viewBox="0 0 300 244" aria-hidden="true"></svg><div class="tach-unit">ОБ/МИН ×1000</div><div class="tach-readout"><strong id="dash-rpm">750</strong><span>ОБОРОТЫ ВАЛА</span></div></div>
     <div class="health-console">
@@ -89,6 +96,7 @@
 <label for="volume">Громкость <output id="volume-value">65%</output></label><input type="range" id="volume" min="0" max="100" value="65">
 <button id="mute" type="button">Выключить звук</button><button id="motion" type="button">Уменьшить тряску</button><button id="battery-boost" type="button">Пусковое питание АКБ</button><button id="reset" type="button">Новый мотор</button></div></details>
 </section>
+<details class="recording-box"><summary>Записи звука и лицензии <span>CC0</span></summary><p id="recording-status" role="status">Записи загружаются при включении звука. Для этой сборки нужна сеть.</p><button id="reload-audio" type="button">Повторить загрузку записей</button><p>Двигатели: MarlonHJ и domasx2. Запуск: looneybits. Металл: Brian MacIntosh (BMacZero). Звуки общих двигателей, не заводская запись именно этого I4.</p><div id="sample-credits"></div><p>Офлайн-аудиопак: <code>npm run audio:fetch &amp;&amp; npm run build</code>. Встроенный пакет имеет приоритет над сетевыми файлами.</p></details>
 <p id="control-info" role="status"></p>
 <footer><span id="audio-status">ЗВУК С ПЕРВОГО НАЖАТИЯ</span><span class="keys">W / ↑ / SPACE · ГАЗ &nbsp; S / ↓ · ТОРМОЗ &nbsp; M · ЗВУК</span><span class="rule" id="model-note">РАСЧЁТНАЯ МОДЕЛЬ I4 · ПОСЛЕДНИЙ ЦИЛИНДР ПОДДЕРЖИВАЕТСЯ ИГРОВОЙ МЕХАНИКОЙ.</span></footer>
 </main>
