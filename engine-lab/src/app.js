@@ -20,6 +20,7 @@
   let targetFps=60, skippedTime=0;
   let frameMs = 16, pausedForTest = false, resetUntil = 0, resetTimer = null, logSignature = null;
   if(Number.isFinite(prefs.volume)) sound.setVolume(prefs.volume);
+  for(const channel of ['engine','mechanical']) if(Number.isFinite(prefs.mix?.[channel])) sound.setMix(channel,prefs.mix[channel]);
   view.setPerformance(prefs.performance || 'auto');
   targetFps=view.performanceMode==='eco'?30:60; $('profile').value=model.profile; $('performance-mode').value=view.performanceMode; $('volume').value=Math.round(sound.volume*100);
   const dom = Object.fromEntries(['rpm', 'temp', 'water', 'oil-temp', 'pressure', 'oil', 'active', 'clock', 'status', 'caption',
@@ -60,15 +61,27 @@
   for(const b of document.querySelectorAll('[data-view]'))b.addEventListener('click',()=>{
     view.setView(b.dataset.view);document.querySelectorAll('[data-view]').forEach(n=>n.setAttribute('aria-pressed',String(n===b)));view.render(model);
   });
-  $('zoom-out').addEventListener('click',()=>{view.zoom=1;$('inspection-note').textContent='Нажми на карточку цилиндра, чтобы увеличить разрез.';hud();view.render(model);});
+  $('zoom-out').addEventListener('click',()=>{view.zoom=1;view.partFocus=null;$('inspection-note').textContent='Нажми на карточку цилиндра, чтобы увеличить разрез.';hud();view.render(model);});
   cylDom.forEach((d,i)=>{
     d.root.setAttribute('role','button');d.root.setAttribute('tabindex','0');d.root.title='Увеличить цилиндр '+(i+1);
-    const focus=()=>{view.setFocus(i);hud();view.render(model);};d.root.addEventListener('click',focus);
+    const focus=()=>{view.setFocus(i);syncParts();hud();view.render(model);};d.root.addEventListener('click',focus);
     d.root.addEventListener('keydown',e=>{if(e.code==='Enter'||e.code==='Space'){e.preventDefault();e.stopPropagation();focus();}});
   });
+  function syncParts(){
+    for(const b of document.querySelectorAll('[data-part]')) b.setAttribute('aria-pressed',String(view.partFocus===b.dataset.part&&view.zoom>1));
+  }
+  for(const b of document.querySelectorAll('[data-part]')) b.addEventListener('click',()=>{
+    view.setPart(b.dataset.part);syncParts();hud();view.render(model);
+  });
+  $('zoom-out').addEventListener('click',syncParts);
+  for(const channel of ['engine','mechanical']) {
+    const slider=$(channel+'-mix'),output=$(channel+'-mix-value');slider.value=Math.round(sound.mixSettings[channel]*100);output.textContent=slider.value+'%';
+    slider.addEventListener('input',()=>{sound.setMix(channel,Number(slider.value)/100);output.textContent=slider.value+'%';persist();});
+  }
+  sound.onStatus=()=>{audioStatus();};
   function persist() {
     if (testing) return;
-    try { localStorage.setItem(storageKey, JSON.stringify(model.snapshot())); localStorage.setItem(prefsKey, JSON.stringify({ muted: sound.muted, reduced: view.reduced, volume:sound.volume, performance:view.performanceMode })); } catch (_) {}
+    try { localStorage.setItem(storageKey, JSON.stringify(model.snapshot())); localStorage.setItem(prefsKey, JSON.stringify({ muted: sound.muted, reduced: view.reduced, volume:sound.volume, performance:view.performanceMode, mix:sound.mixSettings })); } catch (_) {}
   }
   function newEngine() {
     release(); sound.resume().catch(()=>{}); inspecting=false; view.zoom=1; $('inspect-pause').textContent='Пауза осмотра'; $('inspect-pause').setAttribute('aria-pressed','false'); const profile=model.profile; model = new Engine(); model.setProfile(profile); view.reset(); sound.update(model); logSignature = null; resetUntil = 0;
@@ -140,11 +153,11 @@
       d.name.textContent = !cy.active ? (cy.failure === 'ejected' ? 'ПОРШЕНЬ ВЫБИТ' : 'ОБРЫВ ШАТУНА') : isLast ? 'ДЕРЖИТСЯ' : cy.wear > .65 ? 'ПРОПУСКИ' : cy.wear > .35 ? 'ИЗНОС' : 'РАБОТАЕТ';
       d.bar.style.width = (cy.active ? cy.compression * 100 : 0) + '%';
       d.detail.textContent = cy.active ? `${Math.round(cy.compression * 100)}% · ${Math.round(cy.contact.wallTemp)}°` : 'ОТКЛЮЧЁН';
-      d.root.setAttribute('aria-pressed',String(view.zoom>1&&view.focus===i));
+      d.root.setAttribute('aria-pressed',String(view.zoom>1&&!view.partFocus&&view.focus===i));
       d.root.setAttribute('aria-label', `Цилиндр ${i + 1}: ${d.name.textContent.toLowerCase()}, компрессия ${Math.round(cy.compression * 100)} процентов`);
     });
     const f=model.frictionNm; $('contact-telemetry').textContent=`ТРЕНИЕ (МОДЕЛЬ) · КОЛЬЦА ${f.rings.toFixed(1)} · ЮБКИ ${f.skirts.toFixed(1)} · ВКЛАДЫШИ ${f.bearings.toFixed(1)} · ГРМ ${f.valves.toFixed(1)} Н·м  /  ГБЦ ${Math.round(model.headTemp)}°C`;
-    if(view.zoom>1){const cy=model.cylinders[view.focus];$('inspection-note').textContent=`Цилиндр ${cy.id+1}: ${cy.cycle.name.toLowerCase()} · плёнка ${cy.contact.filmMicron.toFixed(1)} мкм · задиры ${Math.round(cy.contact.liner*100)}%`;}
+    if(view.zoom>1&&!view.partFocus){const cy=model.cylinders[view.focus];$('inspection-note').textContent=`Цилиндр ${cy.id+1}: ${cy.cycle.name.toLowerCase()} · плёнка ${cy.contact.filmMicron.toFixed(1)} мкм · задиры ${Math.round(cy.contact.liner*100)}%`;}
     $('brake-power').textContent=model.brakeKW.toFixed(1); $('brake-torque').textContent=Math.round(model.torqueNm);
     $('exhaust-temp').textContent=Math.round(model.sensor.egt); $('manifold').textContent=model.manifoldBar.toFixed(2); $('fuel-rate').textContent=model.fuelLh.toFixed(1);
     const r=model.relay; $('relay-reading').textContent=`K1 · ${r.heatTrip?'ТЕРМОЗАЩИТА':r.closed?'ЗАМКНУТО':'РАЗОМКНУТО'} · ${r.voltage.toFixed(1)} V · ${r.current.toFixed(1)} A · контакты ${Math.round(r.contactTemp)}°C · катушка ${Math.round(r.coilTemp)}°C`;
@@ -155,7 +168,11 @@
     $('vapour-state').textContent=model.waterCircuit.vapour>.08?'Газовая фаза '+Math.round(model.waterCircuit.vapour*100)+'%':'Без паровых пробок';
     $('jam-state').textContent=model.fragments.jamCount?'Зажато '+model.fragments.jamCount+' · трёт металл':'Зажатых нет';
     $('impact-count').textContent=model.fragments.impacts.toLocaleString('ru-RU')+' столкновений';
-    journal(); dashboard.update(model); ignitionPanel.update(model);
+    journal(); dashboard.update(model); ignitionPanel.update(model);syncParts();
+    if(view.partFocus&&view.zoom>1){
+      const descriptions={radiator:`Радиатор: ${model.waterCircuit.cells[3].temp.toFixed(0)}°C · вентилятор ${Math.round(model.relay.fan*2200)} rpm`,pump:`ОЖ: ${model.waterCircuit.q.toFixed(1)} л/мин · паровая доля ${Math.round(model.waterCircuit.vapour*100)}%`,filter:`Масло: ${model.oilCircuit.q.toFixed(1)} л/мин · фильтр ${Math.round(model.oilCircuit.filterLoad*100)}% · перепуск ${Math.round(model.oilCircuit.bypass*100)}%`,exhaust:`Коллектор ${Math.round(model.exhaust.manifold)}°C · глушитель ${Math.round(model.exhaust.resonator)}°C · давление ${model.exhaust.pressure.toFixed(1)} kPa`,sump:`Осколков ${model.fragments.bodies.length} · зажато ${model.fragments.jamCount} · сопротивление ${model.fragments.resistance.toFixed(1)} Н·м`};
+      $('inspection-note').textContent=descriptions[view.partFocus];
+    }
     if (model.ignition !== 'running') {
       dom['event-title'].textContent = model.ignition === 'cranking' ? 'Стартер крутит. Ждём вспышку.' : model.rpm > 5 ? 'Вал останавливается.' : 'Ключ выключен. Мотор сохранён.';
       dom['event-detail'].textContent = model.startMessage;
