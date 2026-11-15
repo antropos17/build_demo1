@@ -12,7 +12,7 @@ class EngineDSP{
   this.r1=2*.977*Math.cos(2*Math.PI*1470/sr);this.r2=.977*.977;this.mi1=0;this.mi2=0;this.set(this.s);
  }
  noise(){this.seed=(1664525*this.seed+1013904223)>>>0;return this.seed/2147483648-1;}
- set(s){if(!s||!Number.isFinite(s.rpm))return;this.s={...this.s,...s};this.s.rpm=Math.max(300,Math.min(7200,s.rpm));this.s.load=Math.max(0,Math.min(1,s.load||0));this.lowA=1-Math.exp(-2*Math.PI*(260+this.s.load*1500)/this.sr);this.d1=Math.round(this.sr*.0053);this.d2=Math.round(this.sr*.0097);}
+ set(s){if(!s||!Number.isFinite(s.rpm))return;this.s={...this.s,...s};this.s.rpm=Math.max(0,Math.min(7200,s.rpm));this.s.load=Math.max(0,Math.min(1,s.load||0));this.lowA=1-Math.exp(-2*Math.PI*(260+this.s.load*1500)/this.sr);this.d1=Math.round(this.sr*.0053);this.d2=Math.round(this.sr*.0097);}
  hit(level=1){this.mech=Math.max(this.mech,Math.min(1,level));}
  backfire(){this.pop=.9;}
  relay(){this.click=.3;}
@@ -22,11 +22,11 @@ class EngineDSP{
    this.rpm+=(s.rpm-this.rpm)*this.smooth;
    this.phase+=this.rpm/(30*sr);
    if(this.phase>=1){this.phase-=1;const j=this.order[this.counter++%4],a=s.cyl[j]||0;
-    if(a>.001&&!s.cut){const successful=this.noise()*.5+.5>Math.min(.85,s.miss[j]||0)||(live===1&&this.streak[j]>=3);
+    if(a>.001&&!s.cut&&s.running!==false){const successful=this.noise()*.5+.5>Math.min(.85,s.miss[j]||0)||(live===1&&this.streak[j]>=3);
      if(successful){this.env[j]=a*(.22+s.load*.70)*(1+this.noise()*.045);this.age[j]=0;this.streak[j]=0;this.fires++;}
      else{this.streak[j]++;this.misses++;}
     }
-    if(s.damage>.25)this.mech=Math.max(this.mech,(s.damage-.25)*(.08+s.load*.12));
+    if(s.running!==false&&s.damage>.25)this.mech=Math.max(this.mech,(s.damage-.25)*(.08+s.load*.12));
    }
    let impulse=0;const noise=this.noise();
    for(let j=0;j<4;j++){this.age[j]++;const age=this.age[j]/sr;this.env[j]*=this.decay;
@@ -46,7 +46,9 @@ class EngineDSP{
    const pop=this.pop*(this.air*.32+Math.sin(this.shaftPhase*TAU)*.45);
    const rasp=(noise-this.air)*Math.min(.025,(s.friction||0)*.009)*(.15+s.load*.85);
    const brakeNoise=(noise-this.air)*Math.min(.018,(s.brake||0)*.018)*Math.min(1,this.rpm/1800);
-   const input=pipe+this.air*(.012+s.load*.055)+fan+rasp+metal*.07+pop+brakeNoise;
+   const spinning=Math.min(1,this.rpm/500),running=s.running!==false?1:0;
+   const crank=s.starter?(.038*Math.sin(TAU*this.shaftPhase*11)+this.air*.08)*( .65+.35*Math.cos(TAU*this.shaftPhase*2)):0;
+   const input=pipe+this.air*(.012+s.load*.055)*running+fan+rasp*spinning+metal*.07+pop+brakeNoise+crank;
    this.lp+=(input-this.lp)*this.lowA;
    const highPass=this.lp-this.last+.9965*this.dc;this.last=this.lp;this.dc=highPass;
    const v=highPass*2.1;out[i]=v/(1+Math.abs(v))*.82;
@@ -72,9 +74,9 @@ class MotorAudio{
   let guard=0;while(this.next<now+.22&&guard++<4){const n=Math.round(this.ctx.sampleRate*.08),buffer=this.ctx.createBuffer(1,n,this.ctx.sampleRate);this.dsp.render(buffer.getChannelData(0));const src=this.ctx.createBufferSource();src.buffer=buffer;src.connect(this.master);this.sources.add(src);src.onended=()=>{this.sources.delete(src);src.disconnect();};src.start(this.next);this.next+=n/this.ctx.sampleRate;}
  }
  send(s){this.lastState=s;if(this.node)this.node.port.postMessage(s);if(this.dsp)this.dsp.set(s);}
- update(m){this.send({rpm:m.rpm,load:m.throttle,cut:!!(m.revCut||m.overrun),brake:m.brake||0,damage:m.damage,friction:m.friction,fan:m.relay?.fan||0,cyl:m.cylinders.map(c=>c.active?c.compression:0),miss:m.cylinders.map(c=>c.misfire)});}
+ update(m){this.send({rpm:m.rpm,load:m.throttle,running:m.ignition?m.ignition==='running':true,starter:m.ignition==='cranking',cut:!!(m.revCut||m.overrun||m.ignition&&m.ignition!=='running'),brake:m.brake||0,damage:m.damage,friction:m.friction,fan:m.relay?.fan||0,cyl:m.cylinders.map(c=>c.active?c.compression:0),miss:m.cylinders.map(c=>c.misfire)});}
  hit(level=1){if(this.node)this.node.port.postMessage({type:'hit',level});if(this.dsp)this.dsp.hit(level);}
- event(e){if(!this.ready)return;if(e.type==='backfire'||e.type==='relay'){if(this.node)this.node.port.postMessage({type:e.type});if(this.dsp)this.dsp[e.type==='relay'?'relay':'backfire']();}else if(['cylinder','cover','exhaust','leftMount','rightMount','metal','gasket'].includes(e.type))this.hit(e.type==='cylinder'?1:.35);}
+ event(e){if(!this.ready)return;if(e.type==='starter'||e.type==='keyOff'){if(this.node)this.node.port.postMessage({type:'relay'});if(this.dsp)this.dsp.relay();return;}if(e.type==='backfire'||e.type==='relay'){if(this.node)this.node.port.postMessage({type:e.type});if(this.dsp)this.dsp[e.type==='relay'?'relay':'backfire']();}else if(['cylinder','cover','exhaust','leftMount','rightMount','metal','gasket'].includes(e.type))this.hit(e.type==='cylinder'?1:.35);}
  setVolume(value){this.volume=Math.max(0,Math.min(1,Number(value)||0));if(this.master)this.master.gain.setTargetAtTime(this.muted?0:this.volume,this.ctx.currentTime,.03);}
  mute(){this.muted=!this.muted;this.setVolume(this.volume);return this.muted;}
  async suspend(){if(this.ctx?.state==='running'){this.suspended=true;await this.ctx.suspend();}}

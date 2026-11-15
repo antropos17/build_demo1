@@ -10,14 +10,15 @@
 <link rel="stylesheet" href="cutaway.css">
 <link rel="stylesheet" href="instrument.css">
 <link rel="stylesheet" href="dashboard.css">
+<link rel="stylesheet" href="ignition.css">
 <script defer src="src/simulation.js"></script>
-<script defer src="src/dynamics.js"></script><script defer src="src/mechanics.js"></script><script defer src="src/powertrain.js"></script><script defer src="src/dyno.js"></script><script defer src="src/audio.js"></script>
+<script defer src="src/dynamics.js"></script><script defer src="src/mechanics.js"></script><script defer src="src/powertrain.js"></script><script defer src="src/dyno.js"></script><script defer src="src/ignition.js"></script><script defer src="src/audio.js"></script>
 <script defer src="src/mechanical-audio.js"></script><script defer src="src/renderer.js"></script>
-<script defer src="src/workshop.js"></script><script defer src="src/cutaway.js"></script><script defer src="src/effects.js"></script><script defer src="src/pedals.js"></script><script defer src="src/dashboard.js"></script><script defer src="src/app.js"></script>
+<script defer src="src/workshop.js"></script><script defer src="src/cutaway.js"></script><script defer src="src/effects.js"></script><script defer src="src/bench.js"></script><script defer src="src/pedals.js"></script><script defer src="src/dashboard.js"></script><script defer src="src/ignition-panel.js"></script><script defer src="src/app.js"></script>
 </head>
 <body>
 <main class="lab">
-<header class="masthead"><div class="wordmark"><svg aria-hidden="true" viewBox="0 0 36 40"><path d="M6 3h24v16H6zM6 8h24M6 13h24M18 19v12M12 31a6 6 0 1 0 12 0a6 6 0 1 0-12 0"/></svg><div><p class="eyebrow">ENGINE LAB / 10</p><h1>LAST PISTON<span>.</span></h1></div></div><div class="session"><span class="live-dot"></span><span>ДЕРЖИТСЯ ДО ПОСЛЕДНЕГО</span><strong id="clock">00:00</strong></div></header>
+<header class="masthead"><div class="wordmark"><svg aria-hidden="true" viewBox="0 0 36 40"><path d="M6 3h24v16H6zM6 8h24M6 13h24M18 19v12M12 31a6 6 0 1 0 12 0a6 6 0 1 0-12 0"/></svg><div><p class="eyebrow">ENGINE LAB / 11</p><h1>LAST PISTON<span>.</span></h1></div></div><div class="session"><span class="live-dot"></span><span>ДЕРЖИТСЯ ДО ПОСЛЕДНЕГО</span><strong id="clock">00:00</strong></div></header>
 <nav class="inspection-tools" aria-label="Слои разреза">
 <div class="view-modes"><button type="button" data-view="section" aria-pressed="true">Разрез</button><button type="button" data-view="oil" aria-pressed="false">Смазка</button><button type="button" data-view="thermal" aria-pressed="false">Температуры</button><button type="button" data-view="damage" aria-pressed="false">Износ</button></div>
 <div class="inspection-actions"><button type="button" id="inspect-pause" aria-pressed="false">Пауза осмотра</button><button type="button" id="zoom-out">Общий вид</button></div>
@@ -34,8 +35,12 @@
 <div class="cyl" id="cyl2"><div><span>03</span><b>РАБОТАЕТ</b></div><div class="health"><i></i></div><div class="cyl-detail" id="cyl-detail2">100% · 104°</div></div>
 <div class="cyl" id="cyl3"><div><span>04</span><b>РАБОТАЕТ</b></div><div class="health"><i></i></div><div class="cyl-detail" id="cyl-detail3">100% · 104°</div></div>
 </section>
+<section class="ignition-console" aria-label="Зажигание и электропитание">
+<div class="key-section"><button id="ignition-key" class="key-switch" data-state="off" type="button" aria-label="Запустить двигатель"><span class="key-dial" aria-hidden="true"><i class="key-blade"></i></span><span id="key-action">ЗАПУСК</span></button><div class="key-copy"><strong id="key-state">ЗАЖИГАНИЕ ВЫКЛЮЧЕНО</strong><span id="start-message" role="status">Поверни ключ для запуска</span></div></div>
+<div class="electrical-cluster"><div class="power-readings"><div><label for="battery-charge">ЗАРЯД АКБ</label><output id="battery-charge">82%</output><div class="battery-track" aria-hidden="true"><i id="battery-meter"></i></div></div><div><label for="battery-current">ТОК АКБ ±</label><output id="battery-current">0.0</output><small>A</small></div><div><label for="alternator-current">ГЕНЕРАТОР</label><output id="alternator-current">0.0</output><small>A</small></div><div><label for="starter-current">СТАРТЕР</label><output id="starter-current">0</output><small>A</small></div></div><div class="power-foot"><span id="lamp-charge">● АКБ</span><span id="charge-status">РЕЖИМ ОЖИДАНИЯ</span><span>СТАРТЕР <b id="starter-heat">30 °C</b></span></div></div>
+</section>
 <section class="dashboard" aria-label="Приборная панель испытательного стенда">
-  <div class="dash-heading"><span>ПУЛЬТ УПРАВЛЕНИЯ <b>/ 10</b></span><span id="dash-mode">СТРЕСС ×8</span></div>
+  <div class="dash-heading"><span>ПУЛЬТ УПРАВЛЕНИЯ <b>/ 11</b></span><span id="dash-mode">СТРЕСС ×8</span></div>
   <div class="dash-instruments">
     <div class="tachometer"><svg id="tach-face" viewBox="0 0 300 244" aria-hidden="true"></svg><div class="tach-unit">ОБ/МИН ×1000</div><div class="tach-readout"><strong id="dash-rpm">750</strong><span>ОБОРОТЫ ВАЛА</span></div></div>
     <div class="health-console">
@@ -57,7 +62,7 @@
   <div class="dash-bottom"><span class="dash-dot"></span><b id="dash-condition">ХОЛОСТОЙ ХОД</b><span>СТЕНД, НЕ АВТОМОБИЛЬ · НАГРУЗКА НА ВАЛ</span></div>
 </section>
 <section class="pedal-console" aria-label="Педали управления">
-  <div class="pedal-guidance"><span class="eyebrow">ДВЕ ПЕДАЛИ / НЕЗАВИСИМЫЙ ХОД</span><h2>Чувствуй нагрузку.</h2><p id="pedal-help">Выше по педали — сильнее нажатие.<br>Отпусти — педаль вернётся. Можно двумя пальцами.</p><span id="pedal-feedback">Тормоз разгружен</span><div class="keyboard-help"><kbd>W</kbd> / <kbd>↑</kbd> газ &nbsp; <kbd>S</kbd> / <kbd>↓</kbd> тормоз</div></div>
+  <div class="pedal-guidance"><span class="eyebrow">ДВЕ ПЕДАЛИ / НЕЗАВИСИМЫЙ ХОД</span><h2>Чувствуй нагрузку.</h2><p id="pedal-help">Сначала ключ. Выше по педали: сильнее нажатие.<br> Отпусти — педаль вернётся. Можно двумя пальцами.</p><span id="pedal-feedback">Тормоз разгружен</span><div class="keyboard-help"><kbd>W</kbd> / <kbd>↑</kbd> газ &nbsp; <kbd>S</kbd> / <kbd>↓</kbd> тормоз</div></div>
   <div class="pedal-pair">
     <button type="button" id="brake" class="pedal brake-pedal" aria-pressed="false" aria-label="Тормоз: удерживайте, выше сильнее" aria-describedby="pedal-help"><span class="pedal-name">ТОРМОЗ <small>S / ↓</small></span><span class="pedal-scale" aria-hidden="true"><i></i></span><span class="pedal-mechanism" aria-hidden="true"><span class="pedal-arm"></span><span class="pedal-face"><i></i><i></i><i></i><i></i></span><span class="pedal-hinge"></span></span><output>0%</output></button>
     <button type="button" id="gas" class="pedal gas-pedal" aria-pressed="false" aria-label="Газ: удерживайте, выше сильнее" aria-describedby="pedal-help"><span class="pedal-name">ГАЗ <small>W / ↑</small></span><span class="pedal-scale" aria-hidden="true"><i></i></span><span class="pedal-mechanism" aria-hidden="true"><span class="pedal-arm"></span><span class="pedal-face"><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="pedal-hinge"></span></span><output>0%</output></button>
@@ -82,7 +87,7 @@
 <label for="profile">Режим испытания</label><select id="profile"><option value="stress">Стресс-тест ×8</option><option value="normal">Обычная эксплуатация</option></select>
 <label for="performance-mode">Графика</label><select id="performance-mode"><option value="auto">Авто</option><option value="high">Детально</option><option value="eco">Экономно</option></select>
 <label for="volume">Громкость <output id="volume-value">65%</output></label><input type="range" id="volume" min="0" max="100" value="65">
-<button id="mute" type="button">Выключить звук</button><button id="motion" type="button">Уменьшить тряску</button><button id="reset" type="button">Новый мотор</button></div></details>
+<button id="mute" type="button">Выключить звук</button><button id="motion" type="button">Уменьшить тряску</button><button id="battery-boost" type="button">Пусковое питание АКБ</button><button id="reset" type="button">Новый мотор</button></div></details>
 </section>
 <p id="control-info" role="status"></p>
 <footer><span id="audio-status">ЗВУК С ПЕРВОГО НАЖАТИЯ</span><span class="keys">W / ↑ / SPACE · ГАЗ &nbsp; S / ↓ · ТОРМОЗ &nbsp; M · ЗВУК</span><span class="rule" id="model-note">РАСЧЁТНАЯ МОДЕЛЬ I4 · ПОСЛЕДНИЙ ЦИЛИНДР ПОДДЕРЖИВАЕТСЯ ИГРОВОЙ МЕХАНИКОЙ.</span></footer>

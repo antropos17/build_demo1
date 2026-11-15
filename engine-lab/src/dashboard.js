@@ -29,9 +29,9 @@
       const angle = Math.round((-135 + clamp(rpm / 7000, 0, 1) * 270) * 10) / 10;
       if (angle !== this.lastNeedle) { this.needle.setAttribute('transform', `rotate(${angle} 150 126)`); this.needle.style.transform = `rotate(${angle}deg)`; this.lastNeedle = angle; }
       this.text('dash-rpm', String(Math.round(rpm / 10) * 10));
-      this.text('dash-water', m.coolantLevel > .01 ? Math.round(m.sensor.coolant) + '°' : 'СУХО');
-      this.text('dash-oil', m.sensor.pressure.toFixed(1)); this.text('dash-volts', m.relay.voltage.toFixed(1));
-      this.text('dash-brake-temp', Math.round(m.sensor.brakeTemp) + '°');
+      this.text('dash-water', m.coolantLevel > .01 ? String(Math.round(m.sensor.coolant)) : 'СУХО');
+      this.text('dash-oil', m.sensor.pressure.toFixed(1)); this.text('dash-volts', (m.electrical?.voltage ?? m.relay.voltage).toFixed(1));
+      this.text('dash-brake-temp', String(Math.round(m.sensor.brakeTemp)));
       this.text('dash-load', m.absorbedKW.toFixed(1)); this.text('dash-torque', Math.round(m.absorbedNm));
       this.text('dash-fade', Math.round(m.brakeFade * 100) + '%');
       this.text('dash-cylinder', m.activeCount + ' / 4');
@@ -42,7 +42,7 @@
       this.lamp('lamp-oil', m.pressure < .7); this.lamp('lamp-coolant', m.coolant > 110 || m.coolantLevel < .01);
       this.lamp('lamp-brake', m.brakeTemp > 400); this.lamp('lamp-limit', m.revCut);
       this.lamp('lamp-assist', m.antiStall); this.lamp('lamp-fan', m.relay.closed);
-      const condition = m.brakeTemp > 400 ? 'ТОРМОЗ ПЕРЕГРЕТ' : m.antiStall ? 'ЗАЩИТА ОТ ОСТАНОВКИ' : m.revCut ? 'ОТСЕЧКА ТОПЛИВА' : m.brake > .04 ? 'ТОРМОЖЕНИЕ ВАЛА' : m.overrun ? 'СБРОС ГАЗА' : m.throttle > .08 ? 'СВОБОДНЫЙ РАЗГОН' : 'ХОЛОСТОЙ ХОД';
+      const condition = m.ignition === 'cranking' ? 'СТАРТЕР / ПРОКРУТКА' : m.ignition === 'off' ? (m.rpm > 5 ? 'ВЫБЕГ ПОСЛЕ ВЫКЛЮЧЕНИЯ' : 'ОСТАНОВЛЕН КЛЮЧОМ') : m.brakeTemp > 400 ? 'ТОРМОЗ ПЕРЕГРЕТ' : m.antiStall ? 'ЗАЩИТА ОТ ОСТАНОВКИ' : m.revCut ? 'ОТСЕЧКА ТОПЛИВА' : m.brake > .04 ? 'ТОРМОЖЕНИЕ ВАЛА' : m.overrun ? 'СБРОС ГАЗА' : m.throttle > .08 ? 'СВОБОДНЫЙ РАЗГОН' : 'ХОЛОСТОЙ ХОД';
       this.text('dash-condition', condition);
       this.text('pedal-feedback', m.brake > .03 ? `${Math.round(m.absorbedNm)} Н·м · ${m.absorbedKW.toFixed(1)} кВт в тормоз` : 'Тормоз разгружен');
       // Compact continuously driven rotor preview, with a stationary caliper.

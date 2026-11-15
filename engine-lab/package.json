@@ -1,6 +1,6 @@
 {
   "name": "last-piston",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "description": "A two-pedal cutaway engine and inertial test stand that survives on one cylinder.",
   "scripts": {

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.11.0 / 2026-11-15
+
+- Manual ignition with physical cranking, safe starter interlock and non-destructive key-off.
+- Battery charge/current/voltage, generator output/load, starter heat and fan after-run.
+- Visible battery, starter/pinion, ring gear, generator rotor, shaft-coupled disc and caliper.
+- Electrical dashboard, cranking audio, no fresh exhaust or pump-fed droplets when stopped.
+- v6 migration; no persisted pedal or starter commands; corrected shared dashboard text ownership.
+- 75 Node tests and 53 Chromium checks passed. See RELEASE-11.md.
+
 ## 0.10.0 / 2026-11-15
 
 - Added lower instrument cluster and independent analogue gas/brake pedals.

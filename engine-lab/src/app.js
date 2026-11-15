@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const { Engine, Renderer, MotorAudio, PedalInput, Dashboard, clamp } = window.Piston;
+  const { Engine, Renderer, MotorAudio, PedalInput, Dashboard, IgnitionPanel, clamp } = window.Piston;
   const $ = id => document.getElementById(id), canvas = $('engine'), button = $('gas');
   const storageKey = 'last-piston:survivor:v1', prefsKey = 'last-piston:settings:v1';
   const testing = new URLSearchParams(location.search).has('test') || window.__PISTON_TEST__ === true;
@@ -35,6 +35,16 @@
     dom.motion.textContent = view.reduced ? 'Вернуть тряску' : 'Уменьшить тряску'; dom.motion.setAttribute('aria-pressed', String(view.reduced));
   }
   const dashboard = new Dashboard();
+  const ignitionPanel = new IgnitionPanel(action => {
+    release();
+    if (action === 'boost') model.chargeBattery();
+    else {
+      if (model.ignition === 'off') model.requestStart(); else model.requestStop();
+      if (inspecting) setInspection(false);
+      sound.start().then(audioStatus);
+    }
+    events(); sound.update(model); hud(); view.render(model); persist();
+  });
   const pedals = new PedalInput(button, $('brake'), () => {
     if (inspecting) setInspection(false);
     sound.start().then(ok => { audioStatus(); if (!ok) dom['audio-status'].textContent = 'ЗВУК НЕДОСТУПЕН'; });
@@ -61,7 +71,7 @@
     try { localStorage.setItem(storageKey, JSON.stringify(model.snapshot())); localStorage.setItem(prefsKey, JSON.stringify({ muted: sound.muted, reduced: view.reduced, volume:sound.volume, performance:view.performanceMode })); } catch (_) {}
   }
   function newEngine() {
-    release(); inspecting=false; view.zoom=1; $('inspect-pause').textContent='Пауза осмотра'; $('inspect-pause').setAttribute('aria-pressed','false'); const profile=model.profile; model = new Engine(); model.setProfile(profile); view.reset(); sound.update(model); logSignature = null; resetUntil = 0;
+    release(); sound.resume().catch(()=>{}); inspecting=false; view.zoom=1; $('inspect-pause').textContent='Пауза осмотра'; $('inspect-pause').setAttribute('aria-pressed','false'); const profile=model.profile; model = new Engine(); model.setProfile(profile); view.reset(); sound.update(model); logSignature = null; resetUntil = 0;
     clearTimeout(resetTimer); dom.reset.textContent = 'Новый мотор'; dom['control-info'].textContent = 'Новый мотор. Начинаем с четырёх цилиндров.';
     dom['event-log'].textContent = ''; persist(); hud(); view.render(model); drawTrace();
   }
@@ -92,7 +102,7 @@
   window.addEventListener('resize', () => { view.resize(); view.render(model); drawTrace(); });
   function events() {
     for (const e of model.drainEvents()) {
-      if (e.type !== 'brakeHeat') { view.event(e, model); sound.event(e); }
+      if (e.type !== 'brakeHeat') { if (!['starter','keyOff','ignition','battery','startFailed'].includes(e.type)) view.event(e, model); sound.event(e); }
       if (e.type !== 'backfire' && e.type !== 'relay') dom['event-log'].textContent = `${fmt(e.time)} / ${e.message}`;
     }
   }
@@ -139,7 +149,12 @@
     $('exhaust-temp').textContent=Math.round(model.sensor.egt); $('manifold').textContent=model.manifoldBar.toFixed(2); $('fuel-rate').textContent=model.fuelLh.toFixed(1);
     const r=model.relay; $('relay-reading').textContent=`K1 · ${r.heatTrip?'ТЕРМОЗАЩИТА':r.closed?'ЗАМКНУТО':'РАЗОМКНУТО'} · ${r.voltage.toFixed(1)} V · ${r.current.toFixed(1)} A · контакты ${Math.round(r.contactTemp)}°C · катушка ${Math.round(r.coilTemp)}°C`;
     $('model-note').textContent=(model.profile==='stress'?'СТРЕСС ×8: НАГРЕВ И ИЗНОС УСКОРЕНЫ. ':'ОБЫЧНЫЙ ТЕМП НАГРЕВА. ')+'I4, РЕЙТИНГ 110 кВт / 192 Н·м. РАСЧЁТНЫЕ ДАННЫЕ. ПОСЛЕДНИЙ ЦИЛИНДР НЕ ОСТАНАВЛИВАЕТСЯ.';
-    journal(); dashboard.update(model);
+    journal(); dashboard.update(model); ignitionPanel.update(model);
+    if (model.ignition !== 'running') {
+      dom['event-title'].textContent = model.ignition === 'cranking' ? 'Стартер крутит. Ждём вспышку.' : model.rpm > 5 ? 'Вал останавливается.' : 'Ключ выключен. Мотор сохранён.';
+      dom['event-detail'].textContent = model.startMessage;
+      dom.status.lastChild.textContent = model.ignition === 'cranking' ? 'ПУСК СТАРТЕРОМ' : 'ЗАЖИГАНИЕ ВЫКЛЮЧЕНО';
+    }
   }
   const traceCanvas = $('shaft-trace'), trace = traceCanvas.getContext('2d');
   document.querySelector('.diagnostic-fold').addEventListener('toggle', () => { hud(); drawTrace(); });
@@ -179,7 +194,7 @@
 
   if (saved) { dom['event-log'].textContent = 'Мотор и история повреждений восстановлены.'; view.restoreDebris(model); }
   if (testing) window.__engineLab = {
-    get inspecting() { return inspecting; }, get engine() { return model; }, get renderer() { return view; }, get audio() { return sound; }, get held() { return pedals.held; }, get pedals() { return pedals; }, get dashboard() { return dashboard; }, get frameMs() { return frameMs; }, get renderCost(){return renderCost;}, get skippedTime(){return skippedTime;},
+    get ignitionPanel() { return ignitionPanel; }, get inspecting() { return inspecting; }, get engine() { return model; }, get renderer() { return view; }, get audio() { return sound; }, get held() { return pedals.held; }, get pedals() { return pedals; }, get dashboard() { return dashboard; }, get frameMs() { return frameMs; }, get renderCost(){return renderCost;}, get skippedTime(){return skippedTime;},
     pause(value = true) { pausedForTest = value; last = 0; },
     advance(seconds, gas = true, visual = false, brake = 0) {
       for (let n = 0; n < Math.round(seconds * 120); n++) { model.step(1 / 120, gas, brake); events(); if (visual && n % 2 === 0) view.update(1 / 60, model); }
