@@ -16,8 +16,12 @@
   const motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
   sound.muted = prefs.muted === true; view.reduced = prefs.reduced === true || motionPreference.matches;
   let pointer = null, keys = new Set(), held = false, last = 0, acc = 0, hudTime = 0, saveTime = 0;
-  let inspecting = false;
+  let inspecting = false, audioTime=0, perfTime=0, renderCost=0, slowFrames=0;
+  let targetFps=60, skippedTime=0;
   let frameMs = 16, pausedForTest = false, resetUntil = 0, resetTimer = null, logSignature = null;
+  if(Number.isFinite(prefs.volume)) sound.setVolume(prefs.volume);
+  view.setPerformance(prefs.performance || 'auto');
+  targetFps=view.performanceMode==='eco'?30:60; $('profile').value=model.profile; $('performance-mode').value=view.performanceMode; $('volume').value=Math.round(sound.volume*100);
   const dom = Object.fromEntries(['rpm', 'temp', 'water', 'oil-temp', 'pressure', 'oil', 'active', 'clock', 'status', 'caption',
     'event-label', 'event-title', 'event-detail', 'survival', 'event-log', 'audio-status', 'best', 'pulse-state', 'journal',
     'journal-count', 'mute', 'motion', 'reset', 'control-info'].map(id => [id, $(id)]));
@@ -65,10 +69,10 @@
   });
   function persist() {
     if (testing) return;
-    try { localStorage.setItem(storageKey, JSON.stringify(model.snapshot())); localStorage.setItem(prefsKey, JSON.stringify({ muted: sound.muted, reduced: view.reduced })); } catch (_) {}
+    try { localStorage.setItem(storageKey, JSON.stringify(model.snapshot())); localStorage.setItem(prefsKey, JSON.stringify({ muted: sound.muted, reduced: view.reduced, volume:sound.volume, performance:view.performanceMode })); } catch (_) {}
   }
   function newEngine() {
-    release(); inspecting=false; view.zoom=1; $('inspect-pause').textContent='Пауза осмотра'; $('inspect-pause').setAttribute('aria-pressed','false'); model = new Engine(); view.reset(); sound.update(model); logSignature = null; resetUntil = 0;
+    release(); inspecting=false; view.zoom=1; $('inspect-pause').textContent='Пауза осмотра'; $('inspect-pause').setAttribute('aria-pressed','false'); const profile=model.profile; model = new Engine(); model.setProfile(profile); view.reset(); sound.update(model); logSignature = null; resetUntil = 0;
     clearTimeout(resetTimer); dom.reset.textContent = 'Новый мотор'; dom['control-info'].textContent = 'Новый мотор. Начинаем с четырёх цилиндров.';
     dom['event-log'].textContent = ''; persist(); hud(); view.render(model); drawTrace();
   }
@@ -82,6 +86,10 @@
   dom.mute.addEventListener('click', () => { sound.mute(); if (!sound.muted) sound.start().then(audioStatus); audioStatus(); persist(); });
   dom.motion.addEventListener('click', () => { view.reduced = !view.reduced; audioStatus(); persist(); });
   dom.reset.addEventListener('click', requestReset);
+  $('profile').addEventListener('change',e=>{model.setProfile(e.target.value);hud();persist();});
+  $('performance-mode').addEventListener('change',e=>{view.setPerformance(e.target.value);view.cache.clear();targetFps=e.target.value==='eco'?30:60;view.render(model);persist();});
+  $('volume').addEventListener('input',e=>{sound.setVolume(Number(e.target.value)/100);$('volume-value').textContent=e.target.value+'%';persist();});
+  $('volume-value').textContent=Math.round(sound.volume*100)+'%';
   motionPreference.addEventListener?.('change', e => { if (e.matches) view.reduced = true; audioStatus(); });
   window.addEventListener('keydown', e => {
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable) return;
@@ -100,7 +108,7 @@
   function events() {
     for (const e of model.drainEvents()) {
       view.event(e, model); sound.event(e);
-      if (e.type !== 'backfire') dom['event-log'].textContent = `${fmt(e.time)} / ${e.message}`;
+      if (e.type !== 'backfire' && e.type !== 'relay') dom['event-log'].textContent = `${fmt(e.time)} / ${e.message}`;
     }
   }
   function journal() {
@@ -114,23 +122,23 @@
     }
   }
   function hud() {
-    dom.rpm.textContent = Math.round(model.rpm).toLocaleString('ru-RU'); dom.temp.textContent = Math.round(model.block);
-    dom.water.textContent = Math.round(model.coolant) + '°'; dom['oil-temp'].textContent = Math.round(model.oilTemp) + '°';
-    dom.pressure.textContent = model.pressure.toFixed(1); dom.oil.textContent = model.oil.toFixed(1) + ' л';
+    dom.rpm.textContent = (Math.round(model.sensor.rpm/10)*10).toLocaleString('ru-RU'); dom.temp.textContent = model.coolantLevel>.01?Math.round(model.sensor.coolant):'СУХО';
+    dom.water.textContent = Math.round(model.block) + '°'; dom['oil-temp'].textContent = model.oil>.01?Math.round(model.sensor.oil)+'°':'СУХО';
+    dom.pressure.textContent = model.sensor.pressure.toFixed(1); dom.oil.textContent = model.oil.toFixed(2) + ' л';
     dom.active.textContent = model.activeCount; dom.clock.textContent = fmt(model.time);
-    dom.temp.classList.toggle('hot', model.block > 135); dom.pressure.classList.toggle('hot', model.pressure < 1);
+    dom.temp.classList.toggle('hot', model.coolant > 110 || model.coolantLevel<.01); dom.pressure.classList.toggle('hot', model.pressure < 1);
     const stage = model.activeCount === 1 ? 5 : model.activeCount < 4 ? 4 : model.damage > .55 ? 3 : model.gasket > .17 ? 2 : model.block > 135 ? 1 : 0;
     const titles = ['Отступать некуда. Газуй.', 'Температура растёт.', 'Прокладка больше не держит.', 'Металл заговорил.', 'Работает на том, что осталось.', 'Один поршень. Ещё один оборот.'];
     const details = ['Держи газ. Отпусти, чтобы снять нагрузку.', 'Масло и охлаждающая жидкость нагреваются вслед за блоком.', 'Пар из стыков, масло на корпусе. Нагрев ускоряет износ.', 'Вкладыши стучат. Крепления ослабли. Повреждения останутся.', 'Обломки гремят, оставшиеся цилиндры продолжают тянуть.', 'Пропуск. Толчок. Ещё оборот. Последний цилиндр не отключается.'];
     const states = ['ХОЛОСТОЙ ХОД', 'ТЕРМИЧЕСКАЯ НАГРУЗКА', 'ПРОРЫВ ПРОКЛАДКИ', 'СТУК ВКЛАДЫШЕЙ', 'РАБОТА С ПОВРЕЖДЕНИЯМИ', '1 / 4 · ВСЁ ЕЩЁ ЖИВ'];
     dom['event-title'].textContent = titles[stage]; dom['event-detail'].textContent = details[stage];
-    dom['event-label'].textContent = stage === 5 ? 'РЕЖИМ ПОСЛЕДНЕГО ПОРШНЯ' : 'ИСПЫТАНИЕ НА ВЫНОСЛИВОСТЬ';
+    dom['event-label'].textContent = stage === 5 ? 'РЕЖИМ ПОСЛЕДНЕГО ПОРШНЯ' : model.profile==='stress'?'СТРЕСС-ТЕСТ · ТЕПЛО И СТАРЕНИЕ ×8':'ОБЫЧНАЯ ЭКСПЛУАТАЦИЯ';
     dom.status.lastChild.textContent = held && stage === 0 ? 'ПОЛНАЯ НАГРУЗКА' : states[stage];
     dom.caption.textContent = model.activeCount === 1 ? 'ВЫЖИВАНИЕ / ' + fmt(model.survivalTime) : 'ПОВРЕЖДЕНИЯ НЕ ЗАКАНЧИВАЮТ ИГРУ';
     dom.survival.textContent = model.activeCount === 1 ? 'НА ОДНОМ: ' + fmt(model.survivalTime) : 'ВСЕГДА ОСТАЁТСЯ ОДИН';
     dom.best.textContent = `${Math.round(model.peakRPM).toLocaleString('ru-RU')} rpm / ${Math.round(model.peakTemp)}°`;
     dom['pulse-state'].textContent = model.activeCount === 1 ? 'ОДИНОЧНЫЕ ИМПУЛЬСЫ' : model.activeCount < 4 ? 'НЕРАВНОМЕРНЫЙ ХОД' : 'ТОЛЧКИ КОЛЕНВАЛА';
-    ticks.forEach((el, i) => el.classList.toggle('lit', i < Math.round(model.rpm / 7250 * 30)));
+    ticks.forEach((el, i) => el.classList.toggle('lit', i < Math.round(model.sensor.rpm / 6500 * 30)));
     model.cylinders.forEach((cy, i) => {
       const d = cylDom[i], isLast = cy.active && model.activeCount === 1;
       d.root.className = 'cyl' + (!cy.active ? ' off' : isLast ? ' last' : cy.wear > .35 ? ' worn' : '');
@@ -142,6 +150,10 @@
     });
     const f=model.frictionNm; $('contact-telemetry').textContent=`ТРЕНИЕ (МОДЕЛЬ) · КОЛЬЦА ${f.rings.toFixed(1)} · ЮБКИ ${f.skirts.toFixed(1)} · ВКЛАДЫШИ ${f.bearings.toFixed(1)} · ГРМ ${f.valves.toFixed(1)} Н·м  /  ГБЦ ${Math.round(model.headTemp)}°C`;
     if(view.zoom>1){const cy=model.cylinders[view.focus];$('inspection-note').textContent=`Цилиндр ${cy.id+1}: ${cy.cycle.name.toLowerCase()} · плёнка ${cy.contact.filmMicron.toFixed(1)} мкм · задиры ${Math.round(cy.contact.liner*100)}%`;}
+    $('brake-power').textContent=model.brakeKW.toFixed(1); $('brake-torque').textContent=Math.round(model.torqueNm);
+    $('exhaust-temp').textContent=Math.round(model.sensor.egt); $('manifold').textContent=model.manifoldBar.toFixed(2); $('fuel-rate').textContent=model.fuelLh.toFixed(1);
+    const r=model.relay; $('relay-reading').textContent=`K1 · ${r.heatTrip?'ТЕРМОЗАЩИТА':r.closed?'ЗАМКНУТО':'РАЗОМКНУТО'} · ${r.voltage.toFixed(1)} V · ${r.current.toFixed(1)} A · контакты ${Math.round(r.contactTemp)}°C · катушка ${Math.round(r.coilTemp)}°C`;
+    $('model-note').textContent=(model.profile==='stress'?'СТРЕСС ×8: НАГРЕВ И ИЗНОС УСКОРЕНЫ. ':'ОБЫЧНЫЙ ТЕМП НАГРЕВА. ')+'I4, РЕЙТИНГ 110 кВт / 192 Н·м. РАСЧЁТНЫЕ ДАННЫЕ. ПОСЛЕДНИЙ ЦИЛИНДР НЕ ОСТАНАВЛИВАЕТСЯ.';
     journal();
   }
   const traceCanvas = $('shaft-trace'), trace = traceCanvas.getContext('2d');
@@ -156,18 +168,31 @@
   }
   function frame(now) {
     requestAnimationFrame(frame);
-    if (document.hidden || pausedForTest || inspecting) { last = 0; return; }
-    const raw = last ? (now - last) / 1000 : 1 / 60; last = now;
-    const dt = Math.min(.06, Math.max(0, raw)); frameMs = frameMs * .98 + raw * 1000 * .02;
-    acc += dt; let n = 0; while (acc >= 1 / 120 && n++ < 8) { model.step(1 / 120, held); acc -= 1 / 120; }
-    events(); view.update(dt, model); view.render(model); drawTrace();
-    hudTime += dt; saveTime += dt;
-    if (hudTime > .08) { hudTime = 0; hud(); sound.update(model); }
-    if (saveTime > 3) { saveTime = 0; persist(); if (frameMs > 33) view.quality = Math.max(.4, view.quality * .9); }
+    if(document.hidden || pausedForTest || inspecting){last=0;return;}
+    if(last && now-last<1000/targetFps-.6)return;
+    const raw=last?(now-last)/1000:1/60;last=now;
+    const dt=Math.min(.05,Math.max(0,raw));skippedTime+=Math.max(0,raw-dt);
+    frameMs=frameMs*.96+raw*1000*.04;
+    const begin=performance.now();
+    acc+=dt;let n=0;while(acc>=1/120&&n++<6){model.step(1/120,held);acc-=1/120;}if(acc>.05)acc=0;
+    events();view.update(dt,model);view.render(model);
+    const cost=performance.now()-begin;renderCost=renderCost*.95+cost*.05;
+    hudTime+=dt;audioTime+=dt;saveTime+=dt;perfTime+=dt;
+    if(audioTime>.045){audioTime=0;sound.update(model);}
+    if(hudTime>.1){hudTime=0;hud();drawTrace();}
+    if(saveTime>8){saveTime=0;persist();}
+    if(perfTime>2){perfTime=0;
+      if(view.performanceMode==='auto'){
+        slowFrames=(renderCost>16||(targetFps===60&&frameMs>24))?slowFrames+1:Math.max(0,slowFrames-1);
+        if(slowFrames>=2){if(view.pixelRatioLimit>1){view.pixelRatioLimit=1;view.resize();}view.quality=Math.max(.48,view.quality*.8);targetFps=30;slowFrames=0;}
+      }
+      $('performance-reading').textContent=`${Math.min(targetFps,Math.round(1000/Math.max(1,frameMs)))} FPS · ${renderCost.toFixed(1)} ms · ${view.performanceMode==='eco'?'ЭКО':view.performanceMode==='high'?'ДЕТАЛЬНО':'АВТО'}`;
+    }
   }
+
   if (saved) { dom['event-log'].textContent = 'Мотор и история повреждений восстановлены.'; view.restoreDebris(model); }
   if (testing) window.__engineLab = {
-    get inspecting() { return inspecting; }, get engine() { return model; }, get renderer() { return view; }, get audio() { return sound; }, get held() { return held; }, get frameMs() { return frameMs; },
+    get inspecting() { return inspecting; }, get engine() { return model; }, get renderer() { return view; }, get audio() { return sound; }, get held() { return held; }, get frameMs() { return frameMs; }, get renderCost(){return renderCost;}, get skippedTime(){return skippedTime;},
     pause(value = true) { pausedForTest = value; last = 0; },
     advance(seconds, gas = true, visual = false) {
       for (let n = 0; n < Math.round(seconds * 120); n++) { model.step(1 / 120, gas); events(); if (visual && n % 2 === 0) view.update(1 / 60, model); }

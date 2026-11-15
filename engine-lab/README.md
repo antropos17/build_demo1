@@ -1,56 +1,34 @@
-# Last Piston / ENGINE LAB 08
+# Last Piston / ENGINE LAB 09
 
-A single-throttle, procedural four-cylinder engine cutaway. It wears out cylinder by cylinder but the last piston continues to run.
+One throttle. Four cylinders. The last piston never stops.
+
+A standalone procedural engine cutaway with combustion audio, contact wear, a thermally coupled fan relay, finite fluids and persistent damage. No external runtime dependencies, backend or downloaded assets.
 
 ## Run
 
-Open `index.html`, or build the portable HTML:
+Open `index.html`, or build the portable single-file version:
 
 ```sh
 npm test
 npm run build
 ```
 
-Open `dist/last-piston.html`. No runtime packages, remote assets, services or API keys are needed. Sound starts after a user gesture.
+Open `dist/last-piston.html`. Hold **ГАЗ**, Space or Arrow Up. M toggles sound. R twice resets the engine. Cylinder cards zoom the cutaway. Inspection controls switch layers or pause. **Настройки стенда** contains normal/stress profiles, graphics quality and volume. Hidden tabs pause simulation and audio.
 
-## Version 0.8
+## Version 0.9
 
-- Rebuilt longitudinal cutaway: machined flanges, cast surfaces, cross-honed liners, cooling jackets, piston crowns, two compression rings, an oil-control ring, wrist pins, I-section rods, bearing caps between crank throws, counterweights and two camshaft projections.
-- Four strokes each occupy 180 crank degrees. Firing order is 1-3-4-2; the camshaft rotates at half crank speed. Valve heads open into the cylinder, not away from it. Valve timing continues after a disconnected rod.
-- Per-cylinder liner, skirt, ring, bearing, crown and crack wear. Damage is persistent; surface scoring is attached to the component, not randomized every render. Contact wear reduces compression and adds frictional heat.
-- Growing branched fractures, broken rod remnants, displaced material, worn skirt patches and ring grooves. The intact last cylinder keeps driving the shaft.
-- Oil pickup, gallery, crank bearings, piston cooling jets and coolant passages. Oil and steam emissions retain finite inventories from v0.7.
-- Four inspection layers: section, lubrication, temperatures and wear. Click a cylinder card for 1.8x inspection. Pause holds both the mechanism and effects; pressing gas resumes immediately.
-- Validated v1/v2 save migration, v3 contact-wear persistence, keyboard/touch controls, reduced motion, mute, confirmed manual reset and bounded effect pools.
+Continuous combustion DSP with exhaust resonance, intake and bearing noise; relay current and contact heating affect radiator-fan speed; cached mechanical surfaces and half-resolution smoke; automatic rendering budgets; improved collector, silencer, soot and heat staining; unitful power, torque, exhaust-temperature and fuel-flow displays.
 
-## Controls
+[Release details, sources and verification limits](RELEASE-09.md).
 
-Hold **ГАЗ**, Space or Arrow Up. Release to reduce load. M toggles sound. R twice confirms a fresh engine. Inspection, zoom and display layers do not repair the motor.
+The model uses a 1998 cc / 110 kW / 192 N·m reference envelope, not an OEM digital twin. Thermal timing and damage are deliberately accelerated in stress mode. Last-cylinder survival remains a gameplay exception even without oil.
 
-## What is physically represented
+## Development
 
-The slider-crank length constraint and 720-degree cycle are mathematical kinematics. The illustrative I4 uses an 86 mm bore, 86 mm stroke, 142 mm rod and 10.5:1 nominal compression ratio. Valves use ideal zero-overlap sinusoidal lift events. The two camshaft/valve rows are unfolded for legibility; this is not a literal single-plane CAD section of a named production engine.
+`src/powertrain.js` extends the thermal/electrical model; `src/mechanics.js` handles 720-degree kinematics and contact wear; `src/effects.js` adds cached rendering; `src/audio.js` contains the shared AudioWorklet/buffered DSP; `src/app.js` handles input, scheduling and UI.
 
-Cylinder pressure is an analytic polytropic teaching approximation. Per-node friction torques, contact-film thickness and temperature zones are gameplay estimates, not measured calibration. The RPM model remains the endurance model rather than a complete torque-balanced thermodynamic solver. Aging is accelerated; thermal values are bounded. Low-speed assist and a compression floor intentionally keep the last cylinder alive even with a dry sump. This is not an engine design, diagnostic or safety tool.
+47 automated tests pass. `python tools/check_release.py` is an optional Playwright/Chromium integration check. Browser verification in the current environment uses inline HTML; hosted AudioWorklet integration and physical mobile hardware were not tested.
 
-## Verification for 0.8
+## Repository
 
-32 Node tests passed, including an hour of virtual one-cylinder operation, geometric invariants, firing order, valves, migration, contact wear, malformed saves, audio DSP and the portable build.
-
-35 Chromium checks passed using the actual standalone build injected into a browser page. They include the four layers, cylinder zoom, keyboard/touch cancellation, inspection pause, rendering without state mutation, bounded effects, sound output, reset and 390/320 px layout. Screenshots were inspected. No JavaScript runtime errors were observed. The browser produced finite nonzero scheduled-buffer audio.
-
-This environment blocks URL navigation. Consequently hosted-origin behavior, native localStorage across navigation and browser AudioWorklet hosting were not verified. Mobile checks used emulation, not a physical phone. The optional script `python tools/check_cutaway.py` attempts a loopback origin and records an explicit inline fallback when environment policy blocks it. Evidence is written to `dist/verification-08/`.
-
-## Source layout
-
-- `simulation.js`, `dynamics.js`: deterministic baseline and endurance dynamics.
-- `mechanics.js`: correct stroke/valve state, pressure approximation, contact wear and v3 migration.
-- `renderer.js`, `workshop.js`: bounded visual effects and component fatigue infrastructure.
-- `cutaway.js`: the v0.8 cutaway and inspection layers.
-- `audio.js`, `mechanical-audio.js`: combustion synthesis, fallback audio and friction/impact layers.
-- `app.js`: input, inspection, telemetry, persistence and lifecycle.
-- `tests/`: reproducible Node regression suite; `tools/`: build and browser checks.
-
-Technical references and modeling boundaries are recorded in `ENGINEERING.md`.
-
-Work only in `engine-lab/` on branch `engine-lab` of `antropos17/build_demo1`. Do not touch the parent application's main branch. There is no terminal failure, automatic restart or zero-cylinder state.
+Current home: `antropos17/build_demo1`, branch `engine-lab`, folder `engine-lab/`. The parent app's main branch is untouched. This folder can become an independent repository: extract the project ZIP outside any Git tree, authenticate GitHub CLI, then run `bash tools/publish-github.sh last-piston`. It creates a private repository by default; `--public` is explicit. Repository creation was not available through the connected tool.

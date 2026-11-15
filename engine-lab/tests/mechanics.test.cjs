@@ -23,7 +23,7 @@ test('Camshaft half speed and slider-crank length/stroke are invariant',()=>{
  approx(pistonGeometry(Math.PI,0).top-pistonGeometry(0,0).top,SPEC.stroke);
 });
 test('Analytic chamber has the chosen compression ratio, finite pressure and signed torque',()=>{
- approx(chamberVolume(0).ratio,1);approx(chamberVolume(Math.PI).ratio,10.5);assert.ok(SPEC.displacement>1998&&SPEC.displacement<1999);
+ approx(chamberVolume(0).ratio,1);approx(chamberVolume(Math.PI).ratio,9.8);assert.ok(SPEC.displacement>1998&&SPEC.displacement<1999);
  for(let a=0;a<TAU*2;a+=.015)assert.ok(Number.isFinite(gasPressure(a,1,.9,true)));
  assert.ok(gasPressure(.1,1,1,true)>gasPressure(.1,1,1,false));
  const e=new Engine();e.throttle=1;e.phase=.5;e.refreshCycle();assert.ok(e.cylinders[0].gasTorqueNm>0);

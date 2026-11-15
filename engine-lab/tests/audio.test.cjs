@@ -1,25 +1,9 @@
 'use strict';
-const test = require('node:test'), assert = require('node:assert/strict'), fs = require('node:fs'), vm = require('node:vm'), path = require('node:path');
-function voice() {
-  const source = fs.readFileSync(path.join(__dirname, '../src/audio.js'), 'utf8').replace('root.Piston.MotorAudio=MotorAudio;', 'root.Piston.MotorAudio=MotorAudio;root.__worklet=WORKLET;');
-  const window = { Piston: {} }; vm.runInNewContext(source, { window }); let Voice;
-  class Processor { constructor() { this.port = {}; } }
-  vm.runInNewContext(window.__worklet, { AudioWorkletProcessor: Processor, sampleRate: 48000, registerProcessor: (_, ctor) => { Voice = ctor; }, Float32Array, Math });
-  return new Voice();
-}
-function measure(v, seconds = 1) {
-  let sum = 0, max = 0, samples = 0;
-  for (let i = 0; i < Math.ceil(seconds * 48000 / 128); i++) {
-    const out = new Float32Array(128); assert.equal(v.process([], [[out]]), true);
-    for (const x of out) { assert.ok(Number.isFinite(x)); sum += x * x; max = Math.max(max, Math.abs(x)); samples++; }
-  }
-  return { rms: Math.sqrt(sum / samples), max };
-}
-test('AudioWorklet DSP generates finite bounded engine audio without a browser', () => {
-  const v = voice(), result = measure(v); assert.ok(result.rms > .001); assert.ok(result.max < 1);
-});
-test('One-cylinder DSP remains audible with frequent misfires and impacts', () => {
-  const v = voice(); v.port.onmessage({ data: { rpm: 1800, load: 1, damage: .95, friction: 1.3, cyl: [.28, 0, 0, 0], miss: [.48, 0, 0, 0] } });
-  v.port.onmessage({ data: { type: 'hit', level: 1.5 } }); const result = measure(v, 3);
-  assert.ok(result.rms > .001); assert.ok(result.max < 1);
-});
+const test=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm');
+const {EngineDSP,WORKLET}=require('../src/audio.js');
+function stats(d,seconds=1){let peak=0,sum=0,n=0;for(let i=0;i<Math.ceil(seconds*d.sr/128);i++){let a=new Float32Array(128);d.render(a);for(let v of a){assert.ok(Number.isFinite(v));peak=Math.max(peak,Math.abs(v));sum+=v*v;n++;}}return{peak,rms:Math.sqrt(sum/n)};}
+test('Shared DSP is finite and bounded at 44.1 / 48 / 96 kHz',()=>{for(let sr of[44100,48000,96000]){let d=new EngineDSP(sr);d.set({rpm:6500,load:1});let a=stats(d,2);assert.ok(a.rms>.01);assert.ok(a.peak<.83);}});
+test('Four-stroke firing frequency tracks RPM rather than a fixed audio loop',()=>{for(let rpm of[750,3000,6500]){let d=new EngineDSP();d.rpm=rpm;d.set({rpm,load:.7});stats(d,2);assert.ok(Math.abs(d.fires-rpm/30*2)<2);}});
+test('Single-cylinder DSP forces an ignition after at most three misses',()=>{let d=new EngineDSP();d.set({rpm:1800,load:1,cyl:[.28,0,0,0],miss:[.85,0,0,0],damage:.95});let a=stats(d,8);assert.ok(d.fires>20&&d.misses>20);assert.ok(d.streak[0]<=3);assert.ok(a.peak<.83&&a.rms>.001);});
+test('Generated AudioWorklet module processes actual output blocks',()=>{let Voice;class Processor{constructor(){this.port={};}}vm.runInNewContext(WORKLET,{AudioWorkletProcessor:Processor,sampleRate:48000,registerProcessor:(_,c)=>Voice=c,Float32Array,Float64Array,Uint8Array,Math});const v=new Voice();v.port.onmessage({data:{rpm:3200,load:1,cyl:[1,1,1,1],miss:[0,0,0,0]}});let sum=0;for(let i=0;i<400;i++){const a=new Float32Array(128);assert.equal(v.process([],[[a]]),true);sum+=a.reduce((s,x)=>s+x*x,0);}assert.ok(sum>1);});
+test('Backfire, relay and metallic impacts decay without a runaway signal',()=>{let d=new EngineDSP();d.hit(5);d.backfire();d.relay();const a=stats(d,3);assert.ok(a.peak<.83);assert.ok(d.pop<1e-10&&d.mech<1e-10&&d.click<1e-10);});

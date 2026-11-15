@@ -5,7 +5,7 @@ const base=typeof module!=='undefined'&&module.exports?require('./dynamics.js'):
 const {Engine:EnduranceEngine,TAU,FIRE,clamp,approach,pistonGeometry}=base;
 const CYCLE=2*TAU;
 const wrap=a=>((a%CYCLE)+CYCLE)%CYCLE;
-const SPEC=Object.freeze({bore:86,stroke:86,rod:142,compression:10.5,displacement:Math.PI/4*86*86*86*4/1000});
+const SPEC=Object.freeze({bore:86,stroke:86,rod:142,compression:9.8,displacement:Math.PI/4*86*86*86*4/1000});
 const STROKES=['РАБОЧИЙ ХОД','ВЫПУСК','ВПУСК','СЖАТИЕ'];
 function valveLift(phase,start){const d=wrap(phase-start);return d<Math.PI?Math.sin(d)**2:0;}
 function cycleState(phase,index){

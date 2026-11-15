@@ -38,10 +38,12 @@
       const viscosity = clamp(Math.exp(-(this.oilTemp - 95) / 65), .12, 1.3);
       const oilSupply = clamp(this.oil / 1.8, .025, 1);
       const pump = .65 + Math.min(4.5, this.rpm / 1450);
-      this.pressure = approach(this.pressure, pump * viscosity * oilSupply * (1 - this.gasket * .3), 3, dt);
+      this.pressure = approach(this.pressure, (this.oilPressureTarget ? this.oilPressureTarget() : pump * viscosity * oilSupply * (1 - this.gasket * .3)), 3, dt);
       const starvation = clamp((1.05 - this.pressure) / 1.05, 0, 1);
       this.friction = .06 + starvation * .75 + this.damage * .34 + Math.max(0, this.block - 155) / 330;
       // Three coupled thermal masses, thermostat, radiator, and declining fluid inventory.
+      if (this.advanceThermal) this.advanceThermal(dt, t, active);
+      else {
       const heat = 6.8 + 55 * t * t * (.50 + .50 * active / 4) + this.friction * t * 13;
       const waterTransfer = (this.block - this.coolant) * .45 * Math.max(.13, this.coolantLevel);
       const oilTransfer = (this.block - this.oilTemp) * .22 * Math.max(.1, this.oil / 4.6);
@@ -50,17 +52,19 @@
       const radiator = (this.coolant - 24) * .095 * (.12 + thermostat) * Math.max(.18, this.coolantLevel);
       this.coolant = clamp(this.coolant + (waterTransfer - radiator) * dt / 3.8, 35, 170);
       this.oilTemp = clamp(this.oilTemp + (oilTransfer - (this.oilTemp - 24) * .014) * dt / 4.8, 35, 245);
+      }
+      const aging = this.agingScale || 1;
       const thermalStress = Math.max(0, this.block - 148) / 85;
-      if (this.block > 155) this.gasket = clamp(this.gasket + (this.block - 155) * .00017 * dt, 0, 1);
-      this.coolantLevel = clamp(this.coolantLevel - this.gasket * .0028 * dt, 0, 1);
+      if (this.block > 155) this.gasket = clamp(this.gasket + (this.block - 155) * .00017 * dt * aging, 0, 1);
+      this.coolantLevel = clamp(this.coolantLevel - this.gasket * .0028 * dt * aging, 0, 1);
       const leak = .00005 + this.gasket * (.012 + .018 * t) + this.damage * .009 * t;
-      this.oil = clamp(this.oil - leak * dt, 0, 4.6);
+      this.oil = clamp(this.oil - leak * dt * aging, 0, 4.6);
       this.mountWear = clamp(this.mountWear + t * (this.damage * .006 + .0003) * dt, 0, 1);
       for (const c of this.cylinders) {
         c.temp = approach(c.temp, this.block + (c.active ? 10 + t * 24 : -18), .22, dt);
         if (!c.active) continue;
         const stress = thermalStress * .7 + starvation * .9 + Math.max(0, this.rpm - 5800) / 4500;
-        c.wear = Math.min(.999, c.wear + stress * .026 * c.susceptibility * (.16 + .84 * t) * dt);
+        c.wear = Math.min(.999, c.wear + stress * .026 * c.susceptibility * (.16 + .84 * t) * dt * aging);
         c.last = this.activeCount === 1;
         if (c.last) c.wear = Math.min(c.wear, .955); // Explicit arcade survival rule, not physical protection.
         c.compression = Math.max(c.last ? .28 : .14, 1 - c.wear * .76);
@@ -75,7 +79,7 @@
       }
       const count = this.activeCount;
       if (count === 1) this.survivalTime += dt;
-      const nominal = 690 + t * (6100 * (.23 + .77 * this.power));
+      const nominal = this.targetRPM ? this.targetRPM(t) : 690 + t * (6100 * (.23 + .77 * this.power));
       const imbalance = (4 - count) / 3;
       const ripple = (Math.sin(this.phase) * .7 + Math.sin(this.phase * 2.1) * .3) * (45 + imbalance * 220) * (.25 + t);
       // An intentional low-RPM torque assist prevents a terminal stall.

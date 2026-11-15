@@ -100,7 +100,7 @@
         for (const k of ['missed', 'fired']) if (Number.isFinite(s[k])) c[k] = Math.floor(clamp(s[k], 0, 1e12));
         if (!c.active) { c.wear = 1; c.compression = 0; c.misfire = 0; }
       });
-      const allowed = new Set(['heat', 'gasket', 'metal', 'cylinder', 'last', ...Object.keys(componentLabels)]);
+      const allowed = new Set(['heat', 'gasket', 'metal', 'cylinder', 'last', 'relayHeat', ...Object.keys(componentLabels)]);
       e.log = Array.isArray(data.log) ? data.log.filter(x => x && allowed.has(x.type) && Number.isFinite(x.time) && x.time >= 0 && x.time <= e.time && typeof x.message === 'string')
         .slice(0, 12).map(x => ({ type: x.type, cylinder: Number.isInteger(x.cylinder) ? clamp(x.cylinder, -1, 3) : -1, time: x.time, message: x.message.slice(0, 180) })) : [];
       e.kick = 0; e.recoil = 0; e.exhaustPulse = 0; e.leakRate = 0; e.throttle = 0; e.events = [];

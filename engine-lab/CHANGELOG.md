@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.0 / 2026-11-15
+
+Continuous combustion DSP; bounded buffered fallback; fan-relay I²R heating and cooling feedback; rated-value telemetry; separate normal/stress profiles; cached mechanical surfaces; half-resolution smoke; adaptive quality; updated exhaust and electrical artwork; volume controls. See RELEASE-09.md for measured verification and limitations.
+
 ## 0.8.0 / 2026-11-15
 
 - Rebuilt neutral-metal cutaway, lined/cross-honed bores, ring packs, crank counterweights, I-beam rods, five bearing caps, cam rows, valves, water jackets and oil jets.
