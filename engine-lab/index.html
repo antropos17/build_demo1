@@ -12,18 +12,20 @@
 <link rel="stylesheet" href="dashboard.css">
 <link rel="stylesheet" href="ignition.css">
 <link rel="stylesheet" href="realism.css">
+<link rel="stylesheet" href="assets.css">
 <script defer src="src/simulation.js"></script>
 <script defer src="src/dynamics.js"></script><script defer src="src/mechanics.js"></script><script defer src="src/powertrain.js"></script><script defer src="src/dyno.js"></script><script defer src="src/ignition.js"></script><script defer src="src/internals.js"></script><script defer src="src/audio.js"></script>
-<script defer src="src/mechanical-audio.js"></script><script defer src="src/sample-bank.js"></script><script defer src="assets/soundbank.js"></script><script defer src="src/sample-audio.js"></script><script defer src="src/renderer.js"></script>
-<script defer src="src/workshop.js"></script><script defer src="src/cutaway.js"></script><script defer src="src/effects.js"></script><script defer src="src/bench.js"></script><script defer src="src/realism-view.js"></script><script defer src="src/pedals.js"></script><script defer src="src/dashboard.js"></script><script defer src="src/ignition-panel.js"></script><script defer src="src/app.js"></script>
+<script defer src="src/mechanical-audio.js"></script><script defer src="src/sample-bank.js"></script><script defer src="assets/soundbank.js"></script><script defer src="src/audio-utils.js"></script><script defer src="src/sample-audio.js"></script><script defer src="src/renderer.js"></script>
+<script defer src="src/workshop.js"></script><script defer src="src/cutaway.js"></script><script defer src="src/effects.js"></script><script defer src="src/bench.js"></script><script defer src="src/realism-view.js"></script><script defer src="assets/mechanical-atlas.js"></script><script defer src="src/asset-renderer.js"></script><script defer src="src/pedals.js"></script><script defer src="src/dashboard.js"></script><script defer src="src/ignition-panel.js"></script><script defer src="src/app.js"></script>
 </head>
 <body>
 <main class="lab">
-<header class="masthead"><div class="wordmark"><svg aria-hidden="true" viewBox="0 0 36 40"><path d="M6 3h24v16H6zM6 8h24M6 13h24M18 19v12M12 31a6 6 0 1 0 12 0a6 6 0 1 0-12 0"/></svg><div><p class="eyebrow">ENGINE LAB / 12</p><h1>LAST PISTON<span>.</span></h1></div></div><div class="session"><span class="live-dot"></span><span>ДЕРЖИТСЯ ДО ПОСЛЕДНЕГО</span><strong id="clock">00:00</strong></div></header>
+<header class="masthead"><div class="wordmark"><svg aria-hidden="true" viewBox="0 0 36 40"><path d="M6 3h24v16H6zM6 8h24M6 13h24M18 19v12M12 31a6 6 0 1 0 12 0a6 6 0 1 0-12 0"/></svg><div><p class="eyebrow">ENGINE LAB / 13</p><h1>LAST PISTON<span>.</span></h1></div></div><div class="session"><span class="live-dot"></span><span>ДЕРЖИТСЯ ДО ПОСЛЕДНЕГО</span><strong id="clock">00:00</strong></div></header>
 <nav class="inspection-tools" aria-label="Слои разреза">
 <div class="view-modes"><button type="button" data-view="section" aria-pressed="true">Разрез</button><button type="button" data-view="oil" aria-pressed="false">Смазка</button><button type="button" data-view="thermal" aria-pressed="false">Температуры</button><button type="button" data-view="damage" aria-pressed="false">Износ</button></div>
 <div class="inspection-actions"><button type="button" id="inspect-pause" aria-pressed="false">Пауза осмотра</button><button type="button" id="zoom-out">Общий вид</button></div>
 </nav>
+<div class="part-tools" role="group" aria-label="Осмотр отдельных узлов"><span>УЗЛЫ</span><button type="button" data-part="radiator" aria-pressed="false">Радиатор</button><button type="button" data-part="pump" aria-pressed="false">Помпа</button><button type="button" data-part="filter" aria-pressed="false">Фильтр</button><button type="button" data-part="exhaust" aria-pressed="false">Выпуск</button><button type="button" data-part="sump" aria-pressed="false">Картер</button><span class="offline-badge" title="Звуковые записи и SVG встроены в файл">АССЕТЫ ВНУТРИ</span></div>
 <section class="machine" aria-label="Двигатель в разрезе">
 <div class="scene-caption"><span>РЯДНЫЙ 4 / 2.0 L</span><span id="caption">ГАЗ + ТОРМОЗ · ИНЕРЦИОННЫЙ СТЕНД</span></div>
 <canvas id="engine" width="1200" height="680" role="img" aria-label="Разрез четырёхцилиндрового двигателя: поршни, шатуны, коленвал, клапаны, дым, масляные потёки и вылетающие детали. Повреждения не заканчивают игру.">Состояние двигателя отображено в показателях под сценой.</canvas>
@@ -47,7 +49,7 @@
 <div class="electrical-cluster"><div class="power-readings"><div><label for="battery-charge">ЗАРЯД АКБ</label><output id="battery-charge">82%</output><div class="battery-track" aria-hidden="true"><i id="battery-meter"></i></div></div><div><label for="battery-current">ТОК АКБ ±</label><output id="battery-current">0.0</output><small>A</small></div><div><label for="alternator-current">ГЕНЕРАТОР</label><output id="alternator-current">0.0</output><small>A</small></div><div><label for="starter-current">СТАРТЕР</label><output id="starter-current">0</output><small>A</small></div></div><div class="power-foot"><span id="lamp-charge">● АКБ</span><span id="charge-status">РЕЖИМ ОЖИДАНИЯ</span><span>СТАРТЕР <b id="starter-heat">30 °C</b></span></div></div>
 </section>
 <section class="dashboard" aria-label="Приборная панель испытательного стенда">
-  <div class="dash-heading"><span>ПУЛЬТ УПРАВЛЕНИЯ <b>/ 12</b></span><span id="dash-mode">СТРЕСС ×8</span></div>
+  <div class="dash-heading"><span>ПУЛЬТ УПРАВЛЕНИЯ <b>/ 13</b></span><span id="dash-mode">СТРЕСС ×8</span></div>
   <div class="dash-instruments">
     <div class="tachometer"><svg id="tach-face" viewBox="0 0 300 244" aria-hidden="true"></svg><div class="tach-unit">ОБ/МИН ×1000</div><div class="tach-readout"><strong id="dash-rpm">750</strong><span>ОБОРОТЫ ВАЛА</span></div></div>
     <div class="health-console">
@@ -96,7 +98,7 @@
 <label for="volume">Громкость <output id="volume-value">65%</output></label><input type="range" id="volume" min="0" max="100" value="65">
 <button id="mute" type="button">Выключить звук</button><button id="motion" type="button">Уменьшить тряску</button><button id="battery-boost" type="button">Пусковое питание АКБ</button><button id="reset" type="button">Новый мотор</button></div></details>
 </section>
-<details class="recording-box"><summary>Записи звука и лицензии <span>CC0</span></summary><p id="recording-status" role="status">Записи загружаются при включении звука. Для этой сборки нужна сеть.</p><button id="reload-audio" type="button">Повторить загрузку записей</button><p>Двигатели: MarlonHJ и domasx2. Запуск: looneybits. Металл: Brian MacIntosh (BMacZero). Звуки общих двигателей, не заводская запись именно этого I4.</p><div id="sample-credits"></div><p>Офлайн-аудиопак: <code>npm run audio:fetch &amp;&amp; npm run build</code>. Встроенный пакет имеет приоритет над сетевыми файлами.</p></details>
+<details class="recording-box"><summary>Записи звука и лицензии <span>CC0 · <b id="audio-loaded">0/6</b></span></summary><p id="recording-status" role="status">Шесть исходных записей встроены в этот HTML. Интернет для звука не нужен.</p><button id="reload-audio" type="button">Проверить / включить записи</button><div class="audio-mix"><label for="engine-mix">Двигатель <output id="engine-mix-value">100%</output></label><input type="range" id="engine-mix" min="0" max="100" value="100"><label for="mechanical-mix">Металл и дребезг <output id="mechanical-mix-value">70%</output></label><input type="range" id="mechanical-mix" min="0" max="100" value="70"></div><p>Двигатели: MarlonHJ и domasx2. Запуск: looneybits. Металл: Brian MacIntosh (BMacZero). Звуки общих двигателей, не заводская запись именно этого I4.</p><div id="sample-credits"></div><p>Встроены оригинальные WAV, без синтетического основного звука. Настоящие записи общих двигателей, не точный голос заводского I4. SVG-механика создана специально для этого проекта.</p></details>
 <p id="control-info" role="status"></p>
 <footer><span id="audio-status">ЗВУК С ПЕРВОГО НАЖАТИЯ</span><span class="keys">W / ↑ / SPACE · ГАЗ &nbsp; S / ↓ · ТОРМОЗ &nbsp; M · ЗВУК</span><span class="rule" id="model-note">РАСЧЁТНАЯ МОДЕЛЬ I4 · ПОСЛЕДНИЙ ЦИЛИНДР ПОДДЕРЖИВАЕТСЯ ИГРОВОЙ МЕХАНИКОЙ.</span></footer>
 </main>

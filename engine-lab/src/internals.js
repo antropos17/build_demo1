@@ -50,8 +50,12 @@ class Circuit{
  snapshot(){return {cells:this.cells.map(c=>({...c})),q:this.q,pressure:this.pressure,filterLoad:this.filterLoad,vapour:this.vapour,bypass:this.bypass};}
  restore(s,total){if(s&&Array.isArray(s.cells)&&s.cells.length===6)this.cells.forEach((c,i)=>{const d=s.cells[i]||{};c.litres=finite(d.litres,0,c.capacity,c.capacity);c.temp=finite(d.temp,24,260,90);c.phase=finite(d.phase,0,1);c.bubbles=finite(d.bubbles,0,1);});this.setInventory(total);}
 }
+function writeGeometry(phase,i,x,d){
+ const r=43,length=142,a=phase-base.FIRE[i];d.x=x;d.crankX=x+Math.sin(a)*r;d.crankY=460-Math.cos(a)*r;
+ d.pinY=d.crankY-Math.sqrt(length*length-(d.crankX-x)**2);d.top=d.pinY-36;d.cycle=((a%(TAU*2))+TAU*2)%(TAU*2);return d;
+}
 class Fragments{
- constructor(seed=417){this.seed=seed>>>0;this.bodies=[];this.jamByCylinder=new Uint8Array(4);this.nextId=1;this.impacts=0;this.jamCount=0;this.resistance=0;this.impactEnergy=0;this.dust=0;this.scrape=0;this.cooldown=0;this.events=[];}
+ constructor(seed=417){this.seed=seed>>>0;this.bodies=[];this.jamByCylinder=new Uint8Array(4);this.nextId=1;this.impacts=0;this.jamCount=0;this.resistance=0;this.impactEnergy=0;this.dust=0;this.scrape=0;this.cooldown=0;this.events=[];this._moving=XS.map(()=>({}));this._previous=XS.map(()=>({}));this._frozen=XS.map(()=>({}));this._geo=Array(4);}
  random(){this.seed=(1664525*this.seed+1013904223)>>>0;return this.seed/4294967296;}
  add(cylinder,kind='metal',zone='case',x=null,y=null){
   if(this.bodies.length>=CAP){this.dust=Math.min(1,this.dust+.0005);return null;}
@@ -84,12 +88,12 @@ class Fragments{
   const count=Math.max(1,Math.ceil(dt*240)),h=dt/count,phase=m.phase;
   for(let n=0;n<count;n++){
    const a=phase-m.shaftSpeed*dt+(n+1)*h*m.shaftSpeed;
-   const moving=XS.map((x,i)=>pistonGeometry(a,i,x)),previous=XS.map((x,i)=>pistonGeometry(a-m.shaftSpeed*h,i,x));
-   const geo=moving.map((g,i)=>m.cylinders[i].active?g:pistonGeometry(m.cylinders[i].freeze,i,XS[i]));
+   const moving=this._moving,previous=this._previous,geo=this._geo;
+   for(let i=0;i<4;i++){writeGeometry(a,i,XS[i],moving[i]);writeGeometry(a-m.shaftSpeed*h,i,XS[i],previous[i]);geo[i]=m.cylinders[i].active?moving[i]:writeGeometry(m.cylinders[i].freeze,i,XS[i],this._frozen[i]);}
    for(const p of this.bodies){
     p.contacts=0;p.heat=approach(p.heat,m.block,.2,h);
     if(p.jammed){
-     p.jamAge+=h;jamTorque+=(p.kind==='rod'?3.5:1.2)/count;
+     if(m.rpm>1)p.jamAge+=h;jamTorque+=(p.kind==='rod'?3.5:1.2)/count;
      p.heat=Math.min(390,p.heat+h*m.rpm*.002);this.scrape=Math.max(this.scrape,m.rpm>0?.45:0);
      // A pinched chip is sheared or freed by repeated crank contacts, not a permanent magical anchor.
      if(m.rpm>900&&p.jamAge>3.5+p.r*.3&&p.releaseCount<2){p.jammed=false;p.jamAge=0;p.r=Math.max(1.4,p.r*.72);p.releaseCount++;p.vx=-35;p.vy=80;p.y+=p.zone==='chamber'?0:8;this.dust=clamp(this.dust+.006,0,1);}
@@ -173,5 +177,5 @@ class Engine extends Prior{
   for(const k of ['manifold','resonator','tail'])e.exhaust[k]=finite(d.exhaust?.[k],24,900,e.exhaust[k]);e.exhaust.soot=finite(d.exhaust?.soot,0,1);e.ringShed=e.cylinders.map((c,i)=>d.ringShed?.[i]===true||!c.active);e.events=[];return e;
  }
 }
-const api={...base,Engine,Circuit,Fragments,FRAGMENT_CAP:CAP};if(typeof module!=='undefined'&&module.exports)module.exports=api;else Object.assign(root.Piston,api);
+const api={...base,Engine,Circuit,Fragments,FRAGMENT_CAP:CAP,writeGeometry};if(typeof module!=='undefined'&&module.exports)module.exports=api;else Object.assign(root.Piston,api);
 })(typeof globalThis!=='undefined'?globalThis:this);

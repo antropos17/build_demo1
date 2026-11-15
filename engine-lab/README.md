@@ -1,50 +1,44 @@
-# Last Piston / Engine Lab 12
+# Last Piston / Engine Lab 13
 
-A cutaway engine sandbox with manual ignition, analogue gas/brake, finite fluids and internal wreckage. The last working piston survives.
+An interactive engine cutaway and two-pedal test stand. The last piston keeps going.
 
-## Run
+## Open
+
+Open the supplied portable HTML, or build it locally:
 
 ```sh
+cd engine-lab
+npm run assets:verify
 npm test
 npm run build
 ```
 
-Open `dist/last-piston.html`. The engine, graphics, controls and persistence work offline. **Recorded audio requires network access in this distribution.** Audio sources, credits and exact limitations are in `SOURCES.md` and in the app's sound section.
-
-To embed recordings for an offline build on a connected machine:
-
-```sh
-npm run audio:fetch
-npm run build
-```
-
-No account, API key or runtime package is required. The download script does not overwrite an existing soundbank unless all source files succeed.
+`dist/last-piston.html` includes all source, styles, eight vector assets and six actual CC0 sound recordings. No runtime packages, network connection, API keys, backend or tracking are needed. A static server can serve `index.html` for source development.
 
 ## Controls
 
-Click **ЗАПУСК**. Hold either pedal; a higher pointer position applies more travel. Two fingers can independently operate gas and brake. W / Arrow Up / Space applies gas; S / Arrow Down / B applies brake. Release is momentary. M toggles sound. R twice confirms a new engine. Manual key-off preserves wear and internal fragments.
+**ЗАПУСК** starts the engine. Hold the right pedal for gas and the left pedal for brake; drag higher for more travel. Two fingers operate independently. W / Arrow Up / Space applies gas; S / Arrow Down / B applies brake. Release resets that input. Key-off stops the engine without repairing it. M toggles sound. R twice within four seconds resets the whole engine.
 
-Click a cylinder card for zoom. Inspection pause and section/oil/thermal/wear layers remain available. Settings contain graphics quality, reduced motion, volume, normal/stress mode and battery support. The brake loads a stationary test stand, not a fictional vehicle.
+Cylinder cards zoom into a bore. The new part row inspects the radiator, pump, filter, exhaust or crankcase. General view returns to the full stand. The four original section/oil/thermal/wear layers and inspection pause are retained. Audio mix sliders are in **Записи звука и лицензии**. Rendering quality, reduced shake, normal/stress profiles and battery boost remain in settings.
 
-## Version 0.12
+## 0.13 improvements
 
-- Recorded engine/mechanical sample PLAYER with six credited CC0 source files, no synthetic fallback.
-- Transported oil/coolant, visible hose flow, thermostat bypass, bubbles and contamination-sensitive oil filter.
-- 64 bounded internal fragment bodies, moving-surface contacts, pinching, friction, shearing and secondary damage.
-- Sectioned exhaust silencer, upstream leaks and separated finite-inventory smoke sources.
-- Version-7 persistence and new diagnostics. Existing electrical, pedal and last-piston rules retained.
+The previously network-dependent soundbank is now real and offline. Six unmodified originals are checked against their SHA-256 manifest. The player downmixes and removes DC, normalizes with a peak cap, crossfades proper loop boundaries and caps transient voices. Repeated gestures do not create duplicate loops; starter audio ends when combustion begins. Engine and mechanical recordings have separate mix controls.
 
-This is a simplified 2D contact/finite-volume game model, not a production-engine digital twin or CFD simulation. Generic engine recordings are not a factory soundtrack of the depicted I4. See `RELEASE-12.md` for test scope and assumptions.
+Eight authored SVG assets add radiator louvers, shaped fan blades, filter media and bypass, pump casing/impeller, thermostat, muffler packing/baffles and flange hardware. They are embedded and raster-cached once; fluid windows and moving elements follow live simulation values. Five part inspection views remain live in all diagnostic layers.
 
-## Main additions
+Internal-fragment geometry workspaces are reused rather than recreated every substep. A stationary trapped piece no longer ages toward release. Smoke, external debris, internal bodies, audio voices and caches remain bounded.
 
-`src/internals.js`: model-owned contact physics, fluid circuits and save migration.
-`src/realism-view.js`: pipes, exhaust and internal fragments.
-`src/sample-bank.js`, `src/sample-audio.js`: source credits and recorded-buffer audio.
-`assets/soundbank.js`: optional offline payload, empty in the online-audio distribution.
-`tools/fetch-audio.cjs`: verified-format downloader and embedding.
-`tests/internals.test.cjs`, `tools/check_realism.py`: regression coverage.
+## Model scope
+
+A 2D mechanical sandbox, not certified engine analysis. Internal pieces have contacts and jams; flow is a reduced network model, not CFD. A deliberate low-speed assist keeps the last cylinder running. The sound recordings are generic, not a calibrated acoustic model of a particular engine. Cooling, stopping and reloading never repair damage. No automatic game-over or restart exists.
+
+## Source and verification
+
+`src/internals.js` owns contact/debris/fluid state, `src/asset-renderer.js` the cached vector presentation, `src/audio-utils.js` PCM preparation, and `src/sample-audio.js` recorded playback. Previous model, dashboard, ignition and pedal modules remain in place. `tools/make-svg-assets.py` rebuilds SVG sources; `tools/fetch-audio.cjs` reuses verified audio or fetches missing files without destroying a complete bank.
+
+101 Node tests and 48 Chromium checks passed. The new browser suite `python tools/check_assets.py` uses the actual embedded WAVs with network blocked, not a generated test sound. See RELEASE-13.md and SOURCES.md for measurement scope, original authors and licensing. Physical phone hardware and subjective acoustic quality were not verified here.
 
 ## Repository boundary
 
-Only `engine-lab/` on branch `engine-lab` of `antropos17/build_demo1`. Do not modify or merge the parent application without a separate request. No game-over, automatic restart or zero-active-cylinder terminal state. Only manual key-off stops the survivor.
+Project folder: `engine-lab/`, branch `engine-lab`, repository `antropos17/build_demo1`. Do not modify the parent application's main branch. Standalone builds are produced locally and shared separately.

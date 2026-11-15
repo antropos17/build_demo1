@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.0 / 2026-11-15
+
+- Embedded six downloaded and hash-verified CC0 WAVs; audio works offline.
+- Fixed loop seams, starter cancellation, repeated-start node duplication and audio teardown.
+- Added independent engine/mechanical volume controls and actual-recording browser checks.
+- Authored eight SVG mechanical assets; cached atlas, five live part-inspection views.
+- Detailed radiator, fan, filter bypass, pump, thermostat, fluid windows and muffler packing.
+- Reused contact geometry workspaces; stopped trapped debris no longer releases on wall-clock age.
+- Verified with 101 Node tests and 48 Chromium checks. See RELEASE-13.md.
+
 ## 0.12.0 / 2026-11-15
 
 - Recorded-sound player with six credited CC0 sources, visible network failure and optional offline embed tool. Source binaries were not downloadable here.
