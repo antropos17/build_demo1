@@ -4,55 +4,50 @@ on:
     branches: [engine-lab-audio13-assets]
     paths: [.github/workflows/last-piston-audio.yml]
 permissions:
-  contents: read
+  contents: write
+  actions: read
 jobs:
-  fetch:
+  preserve:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 4
     steps:
-      - name: Download credited CC0 source recordings
-        shell: bash
-        run: |
-          mkdir -p audio-pack
-          python3 - <<'PY'
-          import urllib.request, pathlib, hashlib, json, concurrent.futures, time
-          root = pathlib.Path('audio-pack')
-          sources = {
-            'idle': ('https://opengameart.org/sites/default/files/loop_0.wav', 'domasx2', 'https://opengameart.org/content/racing-car-engine-sound-loops'),
-            'load': ('https://raw.githubusercontent.com/esensar/bugged-racing/de0f97c7e0148968bbe65eda513c1dfc7060292e/assets/engine.wav', 'MarlonHJ', 'https://freesound.org/people/MarlonHJ/sounds/242740/'),
-            'starter': ('https://opengameart.org/sites/default/files/generic_car_startengine.wav', 'looneybits', 'https://opengameart.org/content/car-engine-start-01'),
-            'impact': ('https://opengameart.org/sites/default/files/clank1.wav', 'Brian MacIntosh (BMacZero)', 'https://opengameart.org/content/mechanical-sounds'),
-            'rattle': ('https://opengameart.org/sites/default/files/rattle1.wav', 'Brian MacIntosh (BMacZero)', 'https://opengameart.org/content/mechanical-sounds'),
-            'click': ('https://opengameart.org/sites/default/files/clink1_0.wav', 'Brian MacIntosh (BMacZero)', 'https://opengameart.org/content/metal-impact-sounds'),
-          }
-          def download(pair):
-            name, (url, author, source) = pair
-            record = dict(id=name, url=url, author=author, source=source, license='CC0-1.0')
-            for attempt in range(3):
-              try:
-                req = urllib.request.Request(url, headers={'User-Agent':'Last-Piston-Asset-Pack/0.13'})
-                with urllib.request.urlopen(req, timeout=30) as response:
-                  data = response.read(8000001)
-                if len(data) > 8000000 or data[:4] != b'RIFF' or data[8:12] != b'WAVE':
-                  raise ValueError('not a bounded WAV file')
-                (root / (name+'.wav')).write_bytes(data)
-                record.update(bytes=len(data),sha256=hashlib.sha256(data).hexdigest(),status='downloaded')
-                print(name,len(data),flush=True)
-                return record
-              except Exception as error:
-                record['error'] = str(error)
-                time.sleep(attempt+1)
-            record['status']='failed'
-            return record
-          with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
-            results=list(pool.map(download,sources.items()))
-          (root/'manifest.json').write_text(json.dumps(results,indent=2))
-          print(json.dumps(results,indent=2))
-          PY
-      - name: Upload source files and verified hashes
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: engine-lab-audio13-assets
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: last-piston-cc0-recordings
-          path: audio-pack
-          retention-days: 7
-          if-no-files-found: error
+          run-id: 43751324460
+          github-token: ${{ github.token }}
+          path: audio-originals
+      - name: Verify source hashes and create offline bank
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import pathlib,json,hashlib,base64,shutil
+          source=pathlib.Path('audio-originals')
+          target=pathlib.Path('engine-lab/assets/audio')
+          target.mkdir(parents=True,exist_ok=True)
+          manifest=json.loads((source/'manifest.json').read_text())
+          bank={}
+          for row in manifest:
+              name=row['id']
+              assert name in ['idle','load','starter','impact','rattle','click']
+              assert row['license']=='CC0-1.0' and row['status']=='downloaded'
+              raw=(source/(name+'.wav')).read_bytes()
+              assert hashlib.sha256(raw).hexdigest()==row['sha256']
+              (target/(name+'.wav')).write_bytes(raw)
+              bank[name]=base64.b64encode(raw).decode('ascii')
+          assert len(bank)==6
+          pathlib.Path('engine-lab/assets/soundbank.js').write_text('/* Verified CC0 source recordings. SHA-256 and attribution: audio-manifest.json. */\nwindow.Piston.EMBEDDED_AUDIO='+json.dumps(bank,separators=(',',':'))+';\n')
+          PY
+      - name: Commit only assets to the helper branch
+        shell: bash
+        run: |
+          test "$(git branch --show-current)" = "engine-lab-audio13-assets"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add engine-lab/assets/audio/*.wav engine-lab/assets/soundbank.js
+          git diff --cached --quiet && exit 0
+          git commit -m 'assets: preserve six verified CC0 recordings and offline soundbank'
+          git push origin HEAD:engine-lab-audio13-assets
