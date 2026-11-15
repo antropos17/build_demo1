@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111413"><meta name="description" content="Последний поршень: интерактивный двигатель в разрезе. Газ, дым, износ и бесконечное выживание на одном цилиндре.">
+<title>Last Piston · Держится до последнего</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23111413'/%3E%3Cpath d='M8 7h16v10H8zM16 17v8M12 25h8' fill='none' stroke='%23d1af76' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script defer src="src/simulation.js"></script><script defer src="src/audio.js"></script><script defer src="src/renderer.js"></script><script defer src="src/app.js"></script>
+</head>
+<body>
+<main class="lab">
+<header class="masthead"><div class="wordmark"><svg aria-hidden="true" viewBox="0 0 36 40"><path d="M6 3h24v16H6zM6 8h24M6 13h24M18 19v12M12 31a6 6 0 1 0 12 0a6 6 0 1 0-12 0"/></svg><div><p class="eyebrow">ENGINE LAB / 06</p><h1>LAST PISTON<span>.</span></h1></div></div><div class="session"><span class="live-dot"></span><span>ДЕРЖИТСЯ ДО ПОСЛЕДНЕГО</span><strong id="clock">00:00</strong></div></header>
+<section class="machine" aria-label="Двигатель в разрезе">
+<div class="scene-caption"><span>РЯДНЫЙ 4 / 2.0 L</span><span id="caption">ЧЕТЫРЕ ЦИЛИНДРА. ОДНА КНОПКА.</span></div>
+<canvas id="engine" width="1200" height="680" role="img" aria-label="Разрез четырёхцилиндрового двигателя: поршни, шатуны, коленвал, клапаны, дым, масляные потёки и вылетающие детали. Повреждения не заканчивают игру.">Состояние двигателя отображено в показателях под сценой.</canvas>
+<div class="stage-meta"><span id="status"><i></i>РОВНЫЙ ХОЛОСТОЙ ХОД</span><span class="view-note">РАЗРЕЗ A–A · ДВИЖЕНИЕ ЗАМЕДЛЕНО</span></div>
+</section>
+<section class="telemetry" aria-label="Показатели двигателя">
+<div class="meter rpm-meter"><div class="label">ОБОРОТЫ <span>rpm</span></div><div class="reading" id="rpm">880</div><div class="ticks" id="rpm-ticks" aria-hidden="true"></div></div>
+<div class="meter"><div class="label">БЛОК <span>°C</span></div><div class="reading" id="temp">96</div><div class="micro">ОЖ <b id="water">86°</b><span>МАСЛО <b id="oil-temp">91°</b></span></div></div>
+<div class="meter"><div class="label">ДАВЛЕНИЕ <span>bar</span></div><div class="reading" id="pressure">1.8</div><div class="micro">МАСЛО <b id="oil">4.6 л</b><span id="oil-label">В СИСТЕМЕ</span></div></div>
+<div class="meter active-meter"><div class="label">В СТРОЮ <span>цил.</span></div><div class="reading"><span id="active">4</span><small>/ 4</small></div><div class="micro" id="survival">ВСЕ ЦИЛИНДРЫ РАБОТАЮТ</div></div>
+</section>
+<section class="cylinders" aria-label="Состояние каждого цилиндра">
+<div class="cyl" id="cyl0"><div><span>01</span><b>РАБОТАЕТ</b></div><div class="health"><i></i></div></div>
+<div class="cyl" id="cyl1"><div><span>02</span><b>РАБОТАЕТ</b></div><div class="health"><i></i></div></div>
+<div class="cyl" id="cyl2"><div><span>03</span><b>РАБОТАЕТ</b></div><div class="health"><i></i></div></div>
+<div class="cyl" id="cyl3"><div><span>04</span><b>РАБОТАЕТ</b></div><div class="health"><i></i></div></div>
+</section>
+<section class="controls"><div class="narrative"><p class="eyebrow" id="event-label">ИСПЫТАНИЕ НА ВЫНОСЛИВОСТЬ</p><h2 id="event-title">Отступать некуда. Газуй.</h2><p id="event-detail">Держи газ. Отпусти, чтобы снизить нагрузку и охладить мотор.</p><div class="event-log" id="event-log" aria-live="polite" aria-atomic="true"></div></div><button id="gas" type="button" aria-label="Газ: нажмите и удерживайте" aria-pressed="false"><span class="pedal-icon" aria-hidden="true">↗</span><span>ГАЗ<small>НАЖМИ И ДЕРЖИ</small></span><span class="pedal-lines" aria-hidden="true"></span></button></section>
+<footer><span id="audio-status">ЗВУК ВКЛЮЧИТСЯ С ПЕРВЫМ НАЖАТИЕМ</span><span class="keys">SPACE · ГАЗ &nbsp; M · ЗВУК &nbsp; R · СНАЧАЛА</span><span class="rule">ПОВРЕЖДЕНИЯ ОСТАЮТСЯ. ПОСЛЕДНИЙ ПОРШЕНЬ НЕ СДАЁТСЯ.</span></footer>
+</main>
+<noscript>Для запуска двигателя включите JavaScript.</noscript>
+</body></html>
